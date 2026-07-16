@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Webfit News Community Pulse 2026
 
-## Getting Started
+Premium Next.js + Supabase polling platform for Webfit News.
 
-First, run the development server:
+## Included
+
+- Premium public homepage
+- Public poll pages
+- Supabase connection
+- Secure admin login
+- Admin dashboard
+- Create and edit polls
+- Open, pause and close controls
+- Private, live and published results controls
+- Add and remove poll options
+- Audit-log writes for major admin actions
+- Webfit Solutions Limited footer link
+- RLS-compatible public reads
+
+## Not yet included
+
+The OTP voting workflow is intentionally left for the next phase because it needs:
+- transactional email provider
+- rate limiting
+- CAPTCHA
+- abuse prevention
+- secure OTP hashing
+- final Electoral Commission review wording
+
+The current public poll page clearly labels the voting module as pending.
+
+## Setup
+
+1. Copy `.env.example` to `.env.local`
+2. Fill in your Supabase values
+3. Run:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Create the first admin
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+In Supabase:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Authentication
+2. Users
+3. Add user
+4. Create an email and password
 
-## Learn More
+Then run this SQL in Supabase SQL Editor, replacing the values:
 
-To learn more about Next.js, take a look at the following resources:
+```sql
+insert into public.admin_users (
+  id,
+  full_name,
+  email,
+  role,
+  is_active
+)
+select
+  id,
+  'Sandy',
+  email,
+  'owner',
+  true
+from auth.users
+where email = 'YOUR_ADMIN_EMAIL'
+on conflict (id)
+do update set
+  full_name = excluded.full_name,
+  role = 'owner',
+  is_active = true;
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Push to GitHub. Vercel will deploy automatically.
 
-## Deploy on Vercel
+Add the same environment variables in:
+Vercel > Project > Settings > Environment Variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Domain
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Production URL:
+https://poll.webfitnews.co.nz
+
+## Footer
+
+Powered by Webfit Solutions Limited:
+https://webfitt.co.nz
