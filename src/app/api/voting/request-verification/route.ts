@@ -14,6 +14,22 @@ const VALID_ELIGIBILITY_STATUSES = [
 
 const VALID_ISSUE_SEVERITIES = ["critical", "high", "medium", "low"] as const;
 
+const VALID_FINANCIAL_PRESSURES = [
+  "groceries",
+  "rent_or_mortgage",
+  "electricity_and_utilities",
+  "petrol_and_transport",
+  "insurance",
+  "healthcare",
+  "childcare",
+  "education_costs",
+  "interest_rates",
+  "income_not_keeping_up",
+  "job_loss_or_reduced_hours",
+  "business_slowdown",
+  "other",
+] as const;
+
 function hashValue(value: string) {
   const secret = process.env.OTP_HASH_SECRET;
 
@@ -51,6 +67,7 @@ export async function POST(request: Request) {
     const electorateName = String(body.electorateName || "").trim();
     const issueSeverity = String(body.issueSeverity || "").trim();
     const participantComment = String(body.participantComment || "").trim();
+    const financialPressure = String(body.financialPressure || "").trim();
 
     if (!pollId || !optionId || !email) {
       return NextResponse.json(
@@ -95,6 +112,27 @@ export async function POST(request: Request) {
       ) {
         return NextResponse.json(
           { error: "Please select the option that best describes you." },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (poll.poll_type === "household_finance") {
+      if (
+        financialPressure &&
+        !VALID_FINANCIAL_PRESSURES.includes(
+          financialPressure as (typeof VALID_FINANCIAL_PRESSURES)[number]
+        )
+      ) {
+        return NextResponse.json(
+          { error: "The selected household financial pressure is invalid." },
+          { status: 400 }
+        );
+      }
+
+      if (participantComment.length > 250) {
+        return NextResponse.json(
+          { error: "Your comment must be 250 characters or fewer." },
           { status: 400 }
         );
       }

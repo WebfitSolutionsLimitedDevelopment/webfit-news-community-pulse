@@ -65,9 +65,51 @@ const VALID_ISSUE_SEVERITIES = [
   "low",
 ] as const;
 
+const VALID_FINANCIAL_PRESSURES = [
+  "groceries",
+  "rent_or_mortgage",
+  "electricity_and_utilities",
+  "petrol_and_transport",
+  "insurance",
+  "healthcare",
+  "childcare",
+  "education_costs",
+  "interest_rates",
+  "income_not_keeping_up",
+  "job_loss_or_reduced_hours",
+  "business_slowdown",
+  "other",
+] as const;
+
+const FINANCIAL_PRESSURE_LABELS: Record<
+  (typeof VALID_FINANCIAL_PRESSURES)[number],
+  string
+> = {
+  groceries: "Groceries",
+  rent_or_mortgage: "Rent or mortgage",
+  electricity_and_utilities: "Electricity and utilities",
+  petrol_and_transport: "Petrol and transport",
+  insurance: "Insurance",
+  healthcare: "Healthcare",
+  childcare: "Childcare",
+  education_costs: "Education costs",
+  interest_rates: "Interest rates",
+  income_not_keeping_up: "Income has not kept up with costs",
+  job_loss_or_reduced_hours: "Lost job or reduced work hours",
+  business_slowdown: "Business slowdown",
+  other: "Other",
+};
+
 type ResultRow = {
   option_id: string;
   option_label: string;
+  vote_count: number;
+  percentage: number;
+};
+
+type FinancialPressureResultRow = {
+  value: string;
+  label: string;
   vote_count: number;
   percentage: number;
 };
@@ -148,6 +190,10 @@ export async function POST(request: Request) {
       VALID_ISSUE_SEVERITIES
     );
     const participantComment = String(body.participantComment || "").trim();
+    const financialPressure = optionalAllowedValue(
+      body.financialPressure,
+      VALID_FINANCIAL_PRESSURES
+    );
 
     if (!pollId || !optionId || !verificationId || !email || !otp) {
       return NextResponse.json(
@@ -191,6 +237,24 @@ export async function POST(request: Request) {
       ) {
         return NextResponse.json(
           { error: "Please select the option that best describes you." },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (poll.poll_type === "household_finance") {
+      const rawFinancialPressure = String(body.financialPressure || "").trim();
+
+      if (rawFinancialPressure && !financialPressure) {
+        return NextResponse.json(
+          { error: "The selected household financial pressure is invalid." },
+          { status: 400 }
+        );
+      }
+
+      if (participantComment.length > 250) {
+        return NextResponse.json(
+          { error: "Your comment must be 250 characters or fewer." },
           { status: 400 }
         );
       }
@@ -446,6 +510,11 @@ export async function POST(request: Request) {
       votePayload.participant_comment = participantComment || null;
     }
 
+    if (poll.poll_type === "household_finance") {
+      votePayload.financial_pressure = financialPressure;
+      votePayload.participant_comment = participantComment || null;
+    }
+
     const { data: vote, error: voteError } = await admin
       .from("votes")
       .insert(votePayload)
@@ -505,8 +574,13 @@ export async function POST(request: Request) {
         issue_severity:
           poll.poll_type === "electorate_issue" ? issueSeverity : null,
         participant_comment:
-          poll.poll_type === "electorate_issue"
+          poll.poll_type === "electorate_issue" ||
+          poll.poll_type === "household_finance"
             ? participantComment || null
+            : null,
+        financial_pressure:
+          poll.poll_type === "household_finance"
+            ? financialPressure
             : null,
         risk_score: riskScore,
         risk_flags: riskFlags,
@@ -538,6 +612,8 @@ export async function POST(request: Request) {
 
     let electorateResults: ResultRow[] = [];
     let electorateResponseCount = 0;
+    let financialPressureResults: FinancialPressureResultRow[] = [];
+    let financialPressureResponseCount = 0;
 
     if (poll.poll_type === "electorate_issue") {
       const { data: allOptions, error: allOptionsError } = await admin
@@ -568,6 +644,58 @@ export async function POST(request: Request) {
       );
     }
 
+
+    if (poll.poll_type === "household_finance") {
+      const { data: pressureVotes, error: pressureVotesError } = await admin
+        .from("votes")
+        .select("financial_pressure")
+        .eq("poll_id", pollId)
+        .eq("status", "valid")
+        .not("financial_pressure", "is", null);
+
+      if (pressureVotesError) {
+        throw new Error(pressureVotesError.message);
+      }
+
+      const pressureCounts = new Map<string, number>();
+
+      for (const pressureVote of pressureVotes ?? []) {
+        const value = String(pressureVote.financial_pressure || "").trim();
+
+        if (
+          VALID_FINANCIAL_PRESSURES.includes(
+            value as (typeof VALID_FINANCIAL_PRESSURES)[number]
+          )
+        ) {
+          pressureCounts.set(value, (pressureCounts.get(value) ?? 0) + 1);
+        }
+      }
+
+      financialPressureResponseCount = Array.from(
+        pressureCounts.values()
+      ).reduce((total, count) => total + count, 0);
+
+      financialPressureResults = VALID_FINANCIAL_PRESSURES.map((value) => {
+        const voteCount = pressureCounts.get(value) ?? 0;
+
+        return {
+          value,
+          label: FINANCIAL_PRESSURE_LABELS[value],
+          vote_count: voteCount,
+          percentage:
+            financialPressureResponseCount > 0
+              ? (voteCount / financialPressureResponseCount) * 100
+              : 0,
+        };
+      }).sort((a, b) => {
+        if (b.vote_count !== a.vote_count) {
+          return b.vote_count - a.vote_count;
+        }
+
+        return a.label.localeCompare(b.label, "en-NZ");
+      });
+    }
+
     return NextResponse.json({
       success: true,
       voteId: vote.id,
@@ -582,6 +710,10 @@ export async function POST(request: Request) {
       nationalResponseCount,
       electorateResults,
       electorateResponseCount,
+      financialPressureResults,
+      financialPressureResponseCount,
+      pressureResults: financialPressureResults,
+      pressureResponseCount: financialPressureResponseCount,
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
