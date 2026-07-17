@@ -507,20 +507,7 @@ export function VotingForm({
     >
       <ProcessSteps activeStep={1} />
 
-      <details className="group mt-8 rounded-2xl border border-black/10 bg-neutral-50 p-5">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
-          <span className="flex items-center gap-2">
-            <BarChart3 size={18} className="text-[#7b1025]" />
-            What is the party vote?
-          </span>
-          <ChevronDown className="transition group-open:rotate-180" size={18} />
-        </summary>
-        <p className="mt-3 text-sm leading-6 text-neutral-600">
-          Under New Zealand&apos;s MMP system, your party vote largely determines
-          each party&apos;s share of seats in Parliament. Your electorate vote
-          chooses the person you want to represent your local electorate.
-        </p>
-      </details>
+      
 
       <div className="mt-8 flex items-start gap-4">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#7b1025] text-white">

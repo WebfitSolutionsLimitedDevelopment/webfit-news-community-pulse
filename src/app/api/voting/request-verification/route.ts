@@ -12,6 +12,8 @@ const VALID_ELIGIBILITY_STATUSES = [
   "prefer_not_to_say",
 ] as const;
 
+const VALID_ISSUE_SEVERITIES = ["critical", "high", "medium", "low"] as const;
+
 function hashValue(value: string) {
   const secret = process.env.OTP_HASH_SECRET;
 
@@ -46,21 +48,13 @@ export async function POST(request: Request) {
     const optionId = String(body.optionId || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const eligibilityStatus = String(body.eligibilityStatus || "").trim();
+    const electorateName = String(body.electorateName || "").trim();
+    const issueSeverity = String(body.issueSeverity || "").trim();
+    const participantComment = String(body.participantComment || "").trim();
 
     if (!pollId || !optionId || !email) {
       return NextResponse.json(
         { error: "Required information is missing." },
-        { status: 400 }
-      );
-    }
-
-    if (
-      !VALID_ELIGIBILITY_STATUSES.includes(
-        eligibilityStatus as (typeof VALID_ELIGIBILITY_STATUSES)[number]
-      )
-    ) {
-      return NextResponse.json(
-        { error: "Please select the option that best describes you." },
         { status: 400 }
       );
     }
@@ -78,7 +72,7 @@ export async function POST(request: Request) {
 
     const { data: poll, error: pollError } = await admin
       .from("polls")
-      .select("id, title, status, is_public")
+      .select("id, title, status, is_public, poll_type")
       .eq("id", pollId)
       .maybeSingle();
 
@@ -91,6 +85,66 @@ export async function POST(request: Request) {
         { error: "Voting is not currently open for this poll." },
         { status: 403 }
       );
+    }
+
+    if (poll.poll_type === "party_vote") {
+      if (
+        !VALID_ELIGIBILITY_STATUSES.includes(
+          eligibilityStatus as (typeof VALID_ELIGIBILITY_STATUSES)[number]
+        )
+      ) {
+        return NextResponse.json(
+          { error: "Please select the option that best describes you." },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (poll.poll_type === "electorate_issue") {
+      if (!electorateName) {
+        return NextResponse.json(
+          { error: "Please select your electorate." },
+          { status: 400 }
+        );
+      }
+
+      const { data: electorate, error: electorateError } = await admin
+        .from("electorates")
+        .select("id")
+        .eq("name", electorateName)
+        .eq("election_year", 2026)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (electorateError) {
+        throw new Error(electorateError.message);
+      }
+
+      if (!electorate) {
+        return NextResponse.json(
+          { error: "The selected electorate is invalid." },
+          { status: 400 }
+        );
+      }
+
+      if (
+        issueSeverity &&
+        !VALID_ISSUE_SEVERITIES.includes(
+          issueSeverity as (typeof VALID_ISSUE_SEVERITIES)[number]
+        )
+      ) {
+        return NextResponse.json(
+          { error: "The selected urgency level is invalid." },
+          { status: 400 }
+        );
+      }
+
+      if (participantComment.length > 250) {
+        return NextResponse.json(
+          { error: "Your comment must be 250 characters or fewer." },
+          { status: 400 }
+        );
+      }
     }
 
     const { data: option, error: optionError } = await admin
@@ -188,246 +242,81 @@ export async function POST(request: Request) {
 
     const safeOptionLabel = escapeHtml(option.label);
     const safePollTitle = escapeHtml(poll.title);
+    const safeElectorateName = escapeHtml(electorateName);
+
+    const selectionDetails =
+      poll.poll_type === "electorate_issue"
+        ? `
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#666666;">
+            ${safeElectorateName}
+          </p>
+        `
+        : "";
 
     const { error: emailError } = await resend.emails.send({
       from: fromEmail,
       to: email,
-      subject: "Complete your Webfit News Community Pulse vote",
+      subject: "Complete your Webfit News Community Pulse response",
       html: `
-        <div
-          style="
-            background:#f5f5f3;
-            padding:32px 16px;
-            font-family:Arial,Helvetica,sans-serif;
-            color:#171717;
-          "
-        >
-          <div
-            style="
-              max-width:600px;
-              margin:0 auto;
-              background:#ffffff;
-              border:1px solid #e5e5e5;
-              border-radius:20px;
-              overflow:hidden;
-            "
-          >
-            <div
-              style="
-                height:6px;
-                background:linear-gradient(90deg,#7b1025,#b88a2a);
-              "
-            ></div>
+        <div style="background:#f5f5f3;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#171717;">
+          <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e5e5;border-radius:20px;overflow:hidden;">
+            <div style="height:6px;background:linear-gradient(90deg,#7b1025,#b88a2a);"></div>
 
-            <div style="padding:34px 30px">
-              <p
-                style="
-                  margin:0;
-                  font-size:12px;
-                  letter-spacing:2px;
-                  text-transform:uppercase;
-                  color:#9d741f;
-                  font-weight:700;
-                "
-              >
+            <div style="padding:34px 30px;">
+              <p style="margin:0;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#9d741f;font-weight:700;">
                 Webfit News Community Pulse
               </p>
 
-              <h1
-                style="
-                  margin:18px 0 12px;
-                  font-size:28px;
-                  line-height:1.25;
-                  color:#171717;
-                "
-              >
-                Complete your vote
+              <h1 style="margin:18px 0 12px;font-size:28px;line-height:1.25;color:#171717;">
+                Verify your response
               </h1>
 
-              <p
-                style="
-                  margin:0;
-                  font-size:16px;
-                  line-height:1.75;
-                  color:#555555;
-                "
-              >
-                Thank you for taking part in the Webfit News Community Pulse.
-                Enter the verification code below to securely record your
-                response.
+              <p style="margin:0;font-size:16px;line-height:1.75;color:#555555;">
+                Enter the verification code below to securely record your response.
               </p>
 
-              <div
-                style="
-                  margin:26px 0 0;
-                  padding:18px;
-                  background:#faf7ef;
-                  border:1px solid #eee2c7;
-                  border-radius:14px;
-                "
-              >
-                <p
-                  style="
-                    margin:0 0 6px;
-                    font-size:12px;
-                    letter-spacing:1.4px;
-                    text-transform:uppercase;
-                    color:#777777;
-                    font-weight:700;
-                  "
-                >
+              <div style="margin:26px 0 0;padding:18px;background:#faf7ef;border:1px solid #eee2c7;border-radius:14px;">
+                <p style="margin:0 0 6px;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:#777777;font-weight:700;">
                   Your selected response
                 </p>
 
-                <p
-                  style="
-                    margin:0;
-                    font-size:17px;
-                    line-height:1.5;
-                    color:#171717;
-                    font-weight:700;
-                  "
-                >
+                <p style="margin:0;font-size:17px;line-height:1.5;color:#171717;font-weight:700;">
                   ${safeOptionLabel}
                 </p>
 
-                <p
-                  style="
-                    margin:8px 0 0;
-                    font-size:14px;
-                    line-height:1.5;
-                    color:#666666;
-                  "
-                >
+                ${selectionDetails}
+
+                <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#666666;">
                   ${safePollTitle}
                 </p>
               </div>
 
-              <div
-                style="
-                  margin:26px 0;
-                  padding:24px 16px;
-                  text-align:center;
-                  background:#f6f1e7;
-                  border-radius:14px;
-                "
-              >
-                <p
-                  style="
-                    margin:0 0 10px;
-                    font-size:12px;
-                    text-transform:uppercase;
-                    letter-spacing:1.5px;
-                    color:#777777;
-                    font-weight:700;
-                  "
-                >
+              <div style="margin:26px 0;padding:24px 16px;text-align:center;background:#f6f1e7;border-radius:14px;">
+                <p style="margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:#777777;font-weight:700;">
                   Verification code
                 </p>
 
-                <span
-                  style="
-                    display:inline-block;
-                    font-size:36px;
-                    line-height:1;
-                    letter-spacing:8px;
-                    font-weight:700;
-                    color:#7b1025;
-                  "
-                >
+                <span style="display:inline-block;font-size:36px;line-height:1;letter-spacing:8px;font-weight:700;color:#7b1025;">
                   ${otp}
                 </span>
               </div>
 
-              <p
-                style="
-                  margin:0;
-                  font-size:14px;
-                  line-height:1.7;
-                  color:#666666;
-                "
-              >
-                This code expires in ${OTP_EXPIRY_MINUTES} minutes. Do not
-                share it with anyone.
+              <p style="margin:0;font-size:14px;line-height:1.7;color:#666666;">
+                This code expires in ${OTP_EXPIRY_MINUTES} minutes. Do not share it with anyone.
               </p>
 
-              <div
-                style="
-                  margin-top:26px;
-                  padding:18px;
-                  background:#f8f8f8;
-                  border-radius:12px;
-                "
-              >
-                <p
-                  style="
-                    margin:0 0 10px;
-                    font-size:15px;
-                    font-weight:700;
-                    color:#222222;
-                  "
-                >
+              <div style="margin-top:26px;padding:18px;background:#f8f8f8;border-radius:12px;">
+                <p style="margin:0 0 10px;font-size:15px;font-weight:700;color:#222222;">
                   Why did we ask for your email?
                 </p>
 
-                <p
-                  style="
-                    margin:0;
-                    font-size:14px;
-                    line-height:1.7;
-                    color:#666666;
-                  "
-                >
-                  Your email is used only to send this one-time code and help
-                  prevent duplicate responses. It will not be published with
-                  your vote and will not be added to a marketing list.
+                <p style="margin:0;font-size:14px;line-height:1.7;color:#666666;">
+                  Your email is used only to send this one-time code and help prevent duplicate responses. It will not be published and will not be added to a marketing list.
                 </p>
               </div>
 
-              <div
-                style="
-                  margin-top:26px;
-                  padding:18px;
-                  border:1px solid #e8e8e8;
-                  border-radius:12px;
-                "
-              >
-                <p
-                  style="
-                    margin:0 0 10px;
-                    font-size:15px;
-                    font-weight:700;
-                    color:#222222;
-                  "
-                >
-                  What happens next?
-                </p>
-
-                <ol
-                  style="
-                    margin:0;
-                    padding-left:20px;
-                    font-size:14px;
-                    line-height:1.9;
-                    color:#666666;
-                  "
-                >
-                  <li>Enter this verification code on the poll page.</li>
-                  <li>Your response will be securely recorded.</li>
-                  <li>You will be able to view the current poll results.</li>
-                </ol>
-              </div>
-
-              <p
-                style="
-                  margin:28px 0 0;
-                  font-size:13px;
-                  line-height:1.7;
-                  color:#888888;
-                "
-              >
-                If you did not request this code, you can safely ignore this
-                email.
+              <p style="margin:28px 0 0;font-size:13px;line-height:1.7;color:#888888;">
+                If you did not request this code, you can safely ignore this email.
               </p>
             </div>
           </div>
@@ -437,7 +326,6 @@ export async function POST(request: Request) {
 
     if (emailError) {
       await admin.from("otp_requests").delete().eq("id", verification.id);
-
       throw new Error(emailError.message);
     }
 

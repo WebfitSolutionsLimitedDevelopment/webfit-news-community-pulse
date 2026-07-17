@@ -58,6 +58,20 @@ const VALID_MAIN_ISSUES = [
   "Prefer not to say",
 ] as const;
 
+const VALID_ISSUE_SEVERITIES = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+] as const;
+
+type ResultRow = {
+  option_id: string;
+  option_label: string;
+  vote_count: number;
+  percentage: number;
+};
+
 function hashValue(value: string) {
   const secret = process.env.OTP_HASH_SECRET;
 
@@ -81,6 +95,38 @@ function optionalAllowedValue<T extends readonly string[]>(
     : null;
 }
 
+function buildResultRows(
+  options: Array<{ id: string; label: string }>,
+  votes: Array<{ option_id: string }>
+): ResultRow[] {
+  const counts = new Map<string, number>();
+
+  for (const vote of votes) {
+    counts.set(vote.option_id, (counts.get(vote.option_id) ?? 0) + 1);
+  }
+
+  const total = votes.length;
+
+  return options
+    .map((option) => {
+      const voteCount = counts.get(option.id) ?? 0;
+
+      return {
+        option_id: option.id,
+        option_label: option.label,
+        vote_count: voteCount,
+        percentage: total > 0 ? (voteCount / total) * 100 : 0,
+      };
+    })
+    .sort((a, b) => {
+      if (b.vote_count !== a.vote_count) {
+        return b.vote_count - a.vote_count;
+      }
+
+      return a.option_label.localeCompare(b.option_label, "en-NZ");
+    });
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -90,10 +136,18 @@ export async function POST(request: Request) {
     const verificationId = String(body.verificationId || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const otp = String(body.otp || "").trim();
+
     const eligibilityStatus = String(body.eligibilityStatus || "").trim();
     const region = optionalAllowedValue(body.region, VALID_REGIONS);
     const ageRange = optionalAllowedValue(body.ageRange, VALID_AGE_RANGES);
     const mainIssue = optionalAllowedValue(body.mainIssue, VALID_MAIN_ISSUES);
+
+    const electorateName = String(body.electorateName || "").trim();
+    const issueSeverity = optionalAllowedValue(
+      body.issueSeverity,
+      VALID_ISSUE_SEVERITIES
+    );
+    const participantComment = String(body.participantComment || "").trim();
 
     if (!pollId || !optionId || !verificationId || !email || !otp) {
       return NextResponse.json(
@@ -109,17 +163,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      !VALID_ELIGIBILITY_STATUSES.includes(
-        eligibilityStatus as (typeof VALID_ELIGIBILITY_STATUSES)[number]
-      )
-    ) {
-      return NextResponse.json(
-        { error: "Please select the option that best describes you." },
-        { status: 400 }
-      );
-    }
-
     const detectedCountry =
       request.headers.get("x-vercel-ip-country")?.toUpperCase() || "";
 
@@ -127,7 +170,7 @@ export async function POST(request: Request) {
 
     const { data: poll, error: pollError } = await admin
       .from("polls")
-      .select("id, status, is_public")
+      .select("id, status, is_public, poll_type")
       .eq("id", pollId)
       .maybeSingle();
 
@@ -138,6 +181,52 @@ export async function POST(request: Request) {
         { error: "Voting is not currently open for this poll." },
         { status: 403 }
       );
+    }
+
+    if (poll.poll_type === "party_vote") {
+      if (
+        !VALID_ELIGIBILITY_STATUSES.includes(
+          eligibilityStatus as (typeof VALID_ELIGIBILITY_STATUSES)[number]
+        )
+      ) {
+        return NextResponse.json(
+          { error: "Please select the option that best describes you." },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (poll.poll_type === "electorate_issue") {
+      if (!electorateName) {
+        return NextResponse.json(
+          { error: "Please select your electorate." },
+          { status: 400 }
+        );
+      }
+
+      if (participantComment.length > 250) {
+        return NextResponse.json(
+          { error: "Your comment must be 250 characters or fewer." },
+          { status: 400 }
+        );
+      }
+
+      const { data: electorate, error: electorateError } = await admin
+        .from("electorates")
+        .select("id")
+        .eq("name", electorateName)
+        .eq("election_year", 2026)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (electorateError) throw new Error(electorateError.message);
+
+      if (!electorate) {
+        return NextResponse.json(
+          { error: "The selected electorate is invalid." },
+          { status: 400 }
+        );
+      }
     }
 
     const { data: option, error: optionError } = await admin
@@ -296,6 +385,7 @@ export async function POST(request: Request) {
     }
 
     if (
+      poll.poll_type === "party_vote" &&
       detectedCountry &&
       detectedCountry !== "NZ" &&
       eligibilityStatus === "nz_resident"
@@ -305,6 +395,7 @@ export async function POST(request: Request) {
     }
 
     if (
+      poll.poll_type === "party_vote" &&
       detectedCountry === "NZ" &&
       eligibilityStatus === "eligible_overseas"
     ) {
@@ -329,23 +420,35 @@ export async function POST(request: Request) {
       riskScore += 40;
     }
 
+    const votePayload: Record<string, unknown> = {
+      poll_id: pollId,
+      option_id: optionId,
+      verification_id: verification.id,
+      email_hash: emailHash,
+      ip_hash: ipHash,
+      device_hash: deviceHash,
+      status: riskScore >= 50 ? "flagged" : "valid",
+      risk_score: riskScore,
+      risk_flags: riskFlags,
+    };
+
+    if (poll.poll_type === "party_vote") {
+      votePayload.eligibility_status = eligibilityStatus;
+      votePayload.participant_region = region;
+      votePayload.participant_age_range = ageRange;
+      votePayload.main_election_issue = mainIssue;
+    }
+
+    if (poll.poll_type === "electorate_issue") {
+      votePayload.electorate_name = electorateName;
+      votePayload.issue_priority = option.label;
+      votePayload.issue_severity = issueSeverity;
+      votePayload.participant_comment = participantComment || null;
+    }
+
     const { data: vote, error: voteError } = await admin
       .from("votes")
-      .insert({
-        poll_id: pollId,
-        option_id: optionId,
-        verification_id: verification.id,
-        email_hash: emailHash,
-        ip_hash: ipHash,
-        device_hash: deviceHash,
-        eligibility_status: eligibilityStatus,
-        participant_region: region,
-        participant_age_range: ageRange,
-        main_election_issue: mainIssue,
-        status: riskScore >= 50 ? "flagged" : "valid",
-        risk_score: riskScore,
-        risk_flags: riskFlags,
-      })
+      .insert(votePayload)
       .select("id, status")
       .single();
 
@@ -383,13 +486,28 @@ export async function POST(request: Request) {
       entity_id: vote.id,
       new_data: {
         poll_id: pollId,
+        poll_type: poll.poll_type,
         option_id: optionId,
         option_label: option.label,
         vote_status: vote.status,
-        eligibility_status: eligibilityStatus,
-        participant_region: region,
-        participant_age_range: ageRange,
-        main_election_issue: mainIssue,
+        eligibility_status:
+          poll.poll_type === "party_vote" ? eligibilityStatus : null,
+        participant_region:
+          poll.poll_type === "party_vote" ? region : null,
+        participant_age_range:
+          poll.poll_type === "party_vote" ? ageRange : null,
+        main_election_issue:
+          poll.poll_type === "party_vote" ? mainIssue : null,
+        electorate_name:
+          poll.poll_type === "electorate_issue" ? electorateName : null,
+        issue_priority:
+          poll.poll_type === "electorate_issue" ? option.label : null,
+        issue_severity:
+          poll.poll_type === "electorate_issue" ? issueSeverity : null,
+        participant_comment:
+          poll.poll_type === "electorate_issue"
+            ? participantComment || null
+            : null,
         risk_score: riskScore,
         risk_flags: riskFlags,
         detected_country: detectedCountry || null,
@@ -397,20 +515,58 @@ export async function POST(request: Request) {
       ip_hash: ipHash,
     });
 
-    const { data: results, error: resultsError } = await admin.rpc(
-      "get_public_poll_results",
-      { requested_poll_id: pollId }
-    );
+    const { data: nationalResultsData, error: nationalResultsError } =
+      await admin.rpc("get_public_poll_results", {
+        requested_poll_id: pollId,
+      });
 
-    if (resultsError) {
-      console.error("Post-vote results load failed:", resultsError);
+    if (nationalResultsError) {
+      console.error(
+        "Post-vote national results load failed:",
+        nationalResultsError
+      );
     }
 
-    const resultRows = Array.isArray(results) ? results : [];
-    const totalVerifiedResponses = resultRows.reduce(
+    const nationalResults = Array.isArray(nationalResultsData)
+      ? nationalResultsData
+      : [];
+
+    const nationalResponseCount = nationalResults.reduce(
       (total, row) => total + Number(row.vote_count ?? 0),
       0
     );
+
+    let electorateResults: ResultRow[] = [];
+    let electorateResponseCount = 0;
+
+    if (poll.poll_type === "electorate_issue") {
+      const { data: allOptions, error: allOptionsError } = await admin
+        .from("poll_options")
+        .select("id, label")
+        .eq("poll_id", pollId)
+        .eq("is_active", true)
+        .order("display_order");
+
+      if (allOptionsError) throw new Error(allOptionsError.message);
+
+      const { data: electorateVotes, error: electorateVotesError } =
+        await admin
+          .from("votes")
+          .select("option_id")
+          .eq("poll_id", pollId)
+          .eq("electorate_name", electorateName)
+          .eq("status", "valid");
+
+      if (electorateVotesError) {
+        throw new Error(electorateVotesError.message);
+      }
+
+      electorateResponseCount = electorateVotes?.length ?? 0;
+      electorateResults = buildResultRows(
+        allOptions ?? [],
+        electorateVotes ?? []
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -420,8 +576,12 @@ export async function POST(request: Request) {
         vote.status === "flagged"
           ? "Your response has been received and is awaiting integrity review."
           : "Your verified response has been recorded.",
-      results: resultRows,
-      totalVerifiedResponses,
+      results: nationalResults,
+      totalVerifiedResponses: nationalResponseCount,
+      nationalResults,
+      nationalResponseCount,
+      electorateResults,
+      electorateResponseCount,
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
