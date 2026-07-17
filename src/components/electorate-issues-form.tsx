@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  CircleAlert,
   Loader2,
   LockKeyhole,
   Mail,
@@ -16,6 +17,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  X,
 } from "lucide-react";
 
 type PollOption = {
@@ -53,11 +55,45 @@ type MessageType = "error" | "info" | "success";
 const RESEND_WAIT_SECONDS = 60;
 
 const SEVERITY_OPTIONS = [
-  { value: "critical", label: "Critical", help: "Needs urgent action now" },
-  { value: "high", label: "High", help: "Should be a major priority" },
-  { value: "medium", label: "Medium", help: "Important, but not urgent" },
-  { value: "low", label: "Low", help: "A concern, but lower priority" },
+  { value: "critical", label: "Critical", help: "Urgent action needed" },
+  { value: "high", label: "High", help: "Major local priority" },
+  { value: "medium", label: "Medium", help: "Important, not urgent" },
+  { value: "low", label: "Low", help: "Lower priority concern" },
 ];
+
+function normalise(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("en-NZ")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function fuzzyScore(name: string, query: string) {
+  const n = normalise(name);
+  const q = normalise(query);
+
+  if (!q) return 0;
+  if (n === q) return 1000;
+  if (n.startsWith(q)) return 900;
+  if (n.includes(q)) return 800 - n.indexOf(q);
+
+  let qi = 0;
+  let first = -1;
+  let last = -1;
+
+  for (let i = 0; i < n.length && qi < q.length; i += 1) {
+    if (n[i] === q[qi]) {
+      if (first === -1) first = i;
+      last = i;
+      qi += 1;
+    }
+  }
+
+  if (qi !== q.length) return -1;
+
+  return 600 - (last - first) - first;
+}
 
 export function ElectorateIssuesForm({
   pollId,
@@ -68,6 +104,7 @@ export function ElectorateIssuesForm({
 }: Props) {
   const [step, setStep] = useState<Step>("vote");
   const [electorateQuery, setElectorateQuery] = useState("");
+  const [electorateOpen, setElectorateOpen] = useState(false);
   const [selectedElectorate, setSelectedElectorate] = useState("");
   const [selectedOption, setSelectedOption] = useState("");
   const [severity, setSeverity] = useState("");
@@ -79,31 +116,58 @@ export function ElectorateIssuesForm({
   const [messageType, setMessageType] = useState<MessageType>("info");
   const [submitting, setSubmitting] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [showOptional, setShowOptional] = useState(false);
   const [electorateResults, setElectorateResults] = useState<PollResult[]>([]);
   const [nationalResults, setNationalResults] = useState<PollResult[]>([]);
   const [electorateResponseCount, setElectorateResponseCount] = useState(0);
   const [nationalResponseCount, setNationalResponseCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState("");
 
+  const electorateBoxRef = useRef<HTMLDivElement>(null);
+
   const filteredElectorates = useMemo(() => {
-    const query = electorateQuery.trim().toLocaleLowerCase("en-NZ");
+    const query = electorateQuery.trim();
 
-    if (!query) return electorates;
+    if (!query) return electorates.slice(0, 12);
 
-    return electorates.filter((electorate) =>
-      electorate.name.toLocaleLowerCase("en-NZ").includes(query)
-    );
+    return electorates
+      .map((electorate) => ({
+        electorate,
+        score: fuzzyScore(electorate.name, query),
+      }))
+      .filter((item) => item.score >= 0)
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.electorate.name.localeCompare(b.electorate.name, "en-NZ")
+      )
+      .slice(0, 12)
+      .map((item) => item.electorate);
   }, [electorateQuery, electorates]);
-
-  const selectedElectorateRecord = useMemo(
-    () => electorates.find((item) => item.name === selectedElectorate),
-    [electorates, selectedElectorate]
-  );
 
   const selectedIssue = useMemo(
     () => options.find((option) => option.id === selectedOption),
     [options, selectedOption]
   );
+
+  const completionCount =
+    Number(Boolean(selectedElectorate)) +
+    Number(Boolean(selectedOption)) +
+    Number(Boolean(email.trim()));
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (
+        electorateBoxRef.current &&
+        !electorateBoxRef.current.contains(event.target as Node)
+      ) {
+        setElectorateOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   useEffect(() => {
     if (resendCountdown <= 0) return;
@@ -125,6 +189,13 @@ export function ElectorateIssuesForm({
   function showMessage(text: string, type: MessageType = "info") {
     setMessage(text);
     setMessageType(type);
+  }
+
+  function selectElectorate(name: string) {
+    setSelectedElectorate(name);
+    setElectorateQuery(name);
+    setElectorateOpen(false);
+    setMessage("");
   }
 
   async function requestVerification() {
@@ -190,6 +261,7 @@ export function ElectorateIssuesForm({
           .toLowerCase()}.`,
         "success"
       );
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       showMessage("Something went wrong. Please try again.", "error");
     } finally {
@@ -254,11 +326,7 @@ export function ElectorateIssuesForm({
       );
       setElectorateResponseCount(Number(result.electorateResponseCount ?? 0));
       setNationalResponseCount(
-        Number(
-          result.nationalResponseCount ??
-            result.totalVerifiedResponses ??
-            0
-        )
+        Number(result.nationalResponseCount ?? result.totalVerifiedResponses ?? 0)
       );
       setLastUpdated(
         typeof result.lastUpdated === "string"
@@ -267,6 +335,7 @@ export function ElectorateIssuesForm({
       );
       setStep("results");
       showMessage("Your response has been verified and counted.", "success");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       showMessage("Something went wrong. Please try again.", "error");
     } finally {
@@ -275,147 +344,143 @@ export function ElectorateIssuesForm({
   }
 
   return (
-    <section className="mt-8">
-      <Progress step={step} />
+    <section className="mt-6 sm:mt-8">
+      <StepHeader step={step} />
 
       {step === "vote" && (
         <form
           onSubmit={handleVoteSubmit}
-          className="mt-5 overflow-hidden rounded-[1.75rem] border border-black/10 bg-white shadow-[0_24px_70px_rgba(30,25,18,0.08)]"
+          className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]"
         >
-          <div className="border-b border-black/10 bg-[#fbf8f1] px-5 py-5 sm:px-7">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9d741f]">
-              Your local priority
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.025em] text-neutral-950 sm:text-3xl">
-              Tell us what needs attention where you live
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
-              Select one electorate and one issue. Your response is counted only
-              after email verification.
-            </p>
-          </div>
-
-          <div className="space-y-8 p-5 sm:p-7">
-            <div>
-              <SectionLabel
-                number="1"
-                title="Select your electorate"
-                description="Search all 64 general and 7 Māori electorates."
-              />
-
-              <div className="relative mt-4">
-                <Search
-                  size={18}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
-                />
-                <input
-                  value={electorateQuery}
-                  onChange={(event) => setElectorateQuery(event.target.value)}
-                  placeholder="Search electorate name"
-                  className="h-12 w-full rounded-xl border border-black/10 bg-neutral-50 pl-11 pr-4 text-sm outline-none transition focus:border-[#7b1025] focus:bg-white focus:ring-4 focus:ring-[#7b1025]/10"
-                />
-              </div>
-
-              <div className="mt-3 max-h-72 overflow-y-auto rounded-xl border border-black/10">
-                {filteredElectorates.length === 0 ? (
-                  <p className="p-5 text-sm text-neutral-500">
-                    No electorate matches your search.
-                  </p>
-                ) : (
-                  <div className="divide-y divide-black/5">
-                    {filteredElectorates.map((electorate) => {
-                      const selected = electorate.name === selectedElectorate;
-
-                      return (
-                        <button
-                          type="button"
-                          key={electorate.id}
-                          onClick={() => setSelectedElectorate(electorate.name)}
-                          className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition ${
-                            selected
-                              ? "bg-[#7b1025] text-white"
-                              : "bg-white hover:bg-neutral-50"
-                          }`}
-                        >
-                          <span className="flex min-w-0 items-center gap-3">
-                            <MapPin
-                              size={17}
-                              className={
-                                selected ? "text-white" : "text-[#7b1025]"
-                              }
-                            />
-                            <span className="truncate text-sm font-semibold">
-                              {electorate.name}
-                            </span>
-                          </span>
-
-                          <span
-                            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
-                              selected
-                                ? "bg-white/15 text-white"
-                                : "bg-neutral-100 text-neutral-500"
-                            }`}
-                          >
-                            {electorate.electorate_type === "maori"
-                              ? "Māori"
-                              : "General"}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {selectedElectorateRecord && (
-                <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-                  <CheckCircle2 size={18} />
-                  Selected: {selectedElectorateRecord.name}
-                </div>
-              )}
+          <div className="overflow-hidden rounded-3xl border border-black/8 bg-white shadow-[0_18px_60px_rgba(27,22,16,0.07)]">
+            <div className="border-b border-black/8 px-5 py-5 sm:px-7 sm:py-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9d741f]">
+                Your local voice
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+                Tell us what matters most
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
+                Choose your electorate and one issue. Verification takes less
+                than a minute.
+              </p>
             </div>
 
-            <div className="h-px bg-black/10" />
+            <div className="space-y-7 p-5 sm:p-7">
+              <section>
+                <FieldHeading
+                  number="1"
+                  title="Your electorate"
+                  text="Start typing and select the correct electorate."
+                />
 
-            <div>
-              <SectionLabel
-                number="2"
-                title="Choose the biggest issue"
-                description="Select the one issue that should receive the highest priority."
-              />
+                <div ref={electorateBoxRef} className="relative mt-4">
+                  <div
+                    className={`flex min-h-13 items-center gap-3 rounded-2xl border bg-white px-4 transition ${
+                      electorateOpen
+                        ? "border-[#7b1025] ring-4 ring-[#7b1025]/8"
+                        : "border-black/10"
+                    }`}
+                  >
+                    <Search size={18} className="shrink-0 text-neutral-400" />
+                    <input
+                      value={electorateQuery}
+                      onFocus={() => setElectorateOpen(true)}
+                      onChange={(event) => {
+                        setElectorateQuery(event.target.value);
+                        setSelectedElectorate("");
+                        setElectorateOpen(true);
+                      }}
+                      placeholder="Search electorate, e.g. Manurewa"
+                      className="h-12 min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
+                    />
+                    {electorateQuery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setElectorateQuery("");
+                          setSelectedElectorate("");
+                          setElectorateOpen(true);
+                        }}
+                        className="grid h-8 w-8 place-items-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                        aria-label="Clear electorate search"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {options.map((option) => {
-                  const selected = option.id === selectedOption;
-
-                  return (
-                    <button
-                      type="button"
-                      key={option.id}
-                      onClick={() => setSelectedOption(option.id)}
-                      className={`group rounded-2xl border p-4 text-left transition ${
-                        selected
-                          ? "border-[#7b1025] bg-[#7b1025] text-white shadow-lg shadow-[#7b1025]/15"
-                          : "border-black/10 bg-white hover:-translate-y-0.5 hover:border-[#b88a2a]/60 hover:shadow-md"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="font-semibold">{option.label}</p>
-                          {option.description && (
-                            <p
-                              className={`mt-1.5 text-sm leading-5 ${
-                                selected ? "text-white/75" : "text-neutral-500"
-                              }`}
-                            >
-                              {option.description}
-                            </p>
-                          )}
+                  {electorateOpen && (
+                    <div className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-black/10 bg-white p-2 shadow-[0_20px_50px_rgba(20,20,20,0.16)]">
+                      {filteredElectorates.length === 0 ? (
+                        <div className="px-4 py-5 text-sm text-neutral-500">
+                          No electorate matches your search.
                         </div>
+                      ) : (
+                        filteredElectorates.map((electorate) => (
+                          <button
+                            type="button"
+                            key={electorate.id}
+                            onClick={() => selectElectorate(electorate.name)}
+                            className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[#f7f2e8]"
+                          >
+                            <span className="flex min-w-0 items-center gap-3">
+                              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#7b1025]/8 text-[#7b1025]">
+                                <MapPin size={17} />
+                              </span>
+                              <span className="truncate text-sm font-semibold">
+                                {electorate.name}
+                              </span>
+                            </span>
+                            <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500">
+                              {electorate.electorate_type === "maori"
+                                ? "Māori"
+                                : "General"}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
 
+                {selectedElectorate && (
+                  <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                    <CheckCircle2 size={17} />
+                    {selectedElectorate} selected
+                  </div>
+                )}
+              </section>
+
+              <div className="h-px bg-black/8" />
+
+              <section>
+                <FieldHeading
+                  number="2"
+                  title="Biggest local issue"
+                  text="Select the one issue that deserves the highest priority."
+                />
+
+                <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                  {options.map((option) => {
+                    const selected = option.id === selectedOption;
+
+                    return (
+                      <button
+                        type="button"
+                        key={option.id}
+                        onClick={() => {
+                          setSelectedOption(option.id);
+                          setMessage("");
+                        }}
+                        className={`group flex min-h-20 items-start gap-3 rounded-2xl border p-4 text-left transition ${
+                          selected
+                            ? "border-[#7b1025] bg-[#7b1025] text-white shadow-[0_10px_25px_rgba(123,16,37,0.16)]"
+                            : "border-black/8 bg-white hover:border-[#b88a2a]/60 hover:bg-[#fcfaf5]"
+                        }`}
+                      >
                         <span
-                          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
+                          className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
                             selected
                               ? "border-white bg-white text-[#7b1025]"
                               : "border-black/15 text-transparent"
@@ -423,149 +488,200 @@ export function ElectorateIssuesForm({
                         >
                           <Check size={14} strokeWidth={3} />
                         </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="h-px bg-black/10" />
-
-            <div>
-              <SectionLabel
-                number="3"
-                title="Optional context"
-                description="These details help explain how strongly people feel."
-              />
-
-              <div className="mt-4">
-                <label className="text-sm font-semibold text-neutral-900">
-                  How urgent is this issue?
-                </label>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {SEVERITY_OPTIONS.map((option) => {
-                    const selected = severity === option.value;
-
-                    return (
-                      <button
-                        type="button"
-                        key={option.value}
-                        onClick={() =>
-                          setSeverity(selected ? "" : option.value)
-                        }
-                        className={`rounded-xl border p-3 text-left transition ${
-                          selected
-                            ? "border-[#b88a2a] bg-[#fff7df]"
-                            : "border-black/10 hover:bg-neutral-50"
-                        }`}
-                      >
-                        <p className="text-sm font-semibold">{option.label}</p>
-                        <p className="mt-1 text-xs leading-5 text-neutral-500">
-                          {option.help}
-                        </p>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold">
+                            {option.label}
+                          </span>
+                          {option.description && (
+                            <span
+                              className={`mt-1 block text-xs leading-5 ${
+                                selected ? "text-white/70" : "text-neutral-500"
+                              }`}
+                            >
+                              {option.description}
+                            </span>
+                          )}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
+              </section>
+
+              <div className="h-px bg-black/8" />
+
+              <section>
+                <button
+                  type="button"
+                  onClick={() => setShowOptional((value) => !value)}
+                  className="flex w-full items-center justify-between gap-4 text-left"
+                >
+                  <div>
+                    <p className="font-semibold text-neutral-950">
+                      Add optional context
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Tell us how urgent this issue feels locally.
+                    </p>
+                  </div>
+                  <ChevronDown
+                    size={20}
+                    className={`shrink-0 text-neutral-400 transition ${
+                      showOptional ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {showOptional && (
+                  <div className="mt-5 space-y-5">
+                    <div>
+                      <label className="text-sm font-semibold text-neutral-900">
+                        Urgency
+                      </label>
+                      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {SEVERITY_OPTIONS.map((option) => {
+                          const selected = severity === option.value;
+
+                          return (
+                            <button
+                              type="button"
+                              key={option.value}
+                              onClick={() =>
+                                setSeverity(selected ? "" : option.value)
+                              }
+                              className={`rounded-xl border px-3 py-3 text-left transition ${
+                                selected
+                                  ? "border-[#b88a2a] bg-[#fff7df]"
+                                  : "border-black/8 bg-neutral-50 hover:bg-white"
+                              }`}
+                            >
+                              <span className="block text-sm font-semibold">
+                                {option.label}
+                              </span>
+                              <span className="mt-1 block text-[11px] leading-4 text-neutral-500">
+                                {option.help}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between gap-4">
+                        <label
+                          htmlFor="participant-comment"
+                          className="text-sm font-semibold text-neutral-900"
+                        >
+                          Local context
+                        </label>
+                        <span className="text-xs text-neutral-400">
+                          {comment.length}/250
+                        </span>
+                      </div>
+                      <textarea
+                        id="participant-comment"
+                        value={comment}
+                        maxLength={250}
+                        onChange={(event) => setComment(event.target.value)}
+                        placeholder="Briefly explain what you are seeing in your area."
+                        className="mt-2 min-h-24 w-full resize-y rounded-2xl border border-black/10 bg-neutral-50 p-4 text-sm leading-6 outline-none transition focus:border-[#7b1025] focus:bg-white focus:ring-4 focus:ring-[#7b1025]/8"
+                      />
+                    </div>
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+
+          <aside className="lg:sticky lg:top-6 lg:self-start">
+            <div className="rounded-3xl border border-black/8 bg-[#171717] p-5 text-white shadow-[0_18px_60px_rgba(20,20,20,0.14)] sm:p-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#d8b760]">
+                Complete your response
+              </p>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <SummaryRow
+                  label="Electorate"
+                  value={selectedElectorate || "Not selected"}
+                />
+                <div className="my-3 h-px bg-white/10" />
+                <SummaryRow
+                  label="Issue"
+                  value={selectedIssue?.label || "Not selected"}
+                />
               </div>
 
               <div className="mt-5">
-                <div className="flex items-center justify-between gap-4">
-                  <label
-                    htmlFor="participant-comment"
-                    className="text-sm font-semibold text-neutral-900"
-                  >
-                    Tell us more
-                  </label>
-                  <span className="text-xs text-neutral-400">
-                    {comment.length}/250
-                  </span>
+                <label
+                  htmlFor="electorate-email"
+                  className="text-sm font-semibold"
+                >
+                  Email verification
+                </label>
+                <div className="relative mt-2">
+                  <Mail
+                    size={17}
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/40"
+                  />
+                  <input
+                    id="electorate-email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setMessage("");
+                    }}
+                    placeholder="you@example.com"
+                    className="h-12 w-full rounded-xl border border-white/12 bg-white/8 pl-11 pr-4 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#d8b760] focus:ring-4 focus:ring-[#d8b760]/10"
+                  />
                 </div>
-                <textarea
-                  id="participant-comment"
-                  value={comment}
-                  maxLength={250}
-                  onChange={(event) => setComment(event.target.value)}
-                  placeholder="Example: Traffic around the local school is unsafe during morning drop-off."
-                  className="mt-2 min-h-28 w-full resize-y rounded-xl border border-black/10 bg-neutral-50 p-4 text-sm leading-6 outline-none transition focus:border-[#7b1025] focus:bg-white focus:ring-4 focus:ring-[#7b1025]/10"
-                />
-                <p className="mt-2 text-xs leading-5 text-neutral-500">
-                  Comments are reviewed and are not published automatically.
-                </p>
-              </div>
-            </div>
-
-            <div className="h-px bg-black/10" />
-
-            <div>
-              <SectionLabel
-                number="4"
-                title="Verify your response"
-                description="We use a one-time code to reduce duplicate voting."
-              />
-
-              <label
-                htmlFor="electorate-email"
-                className="mt-4 block text-sm font-semibold text-neutral-900"
-              >
-                Email address
-              </label>
-              <div className="relative mt-2">
-                <Mail
-                  size={18}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
-                />
-                <input
-                  id="electorate-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  className="h-12 w-full rounded-xl border border-black/10 bg-neutral-50 pl-11 pr-4 text-sm outline-none transition focus:border-[#7b1025] focus:bg-white focus:ring-4 focus:ring-[#7b1025]/10"
-                />
               </div>
 
-              <div className="mt-3 flex items-start gap-3 rounded-xl bg-[#faf7ef] p-4">
+              <div className="mt-4 flex items-start gap-3 rounded-xl bg-white/5 p-3.5">
                 <LockKeyhole
-                  size={18}
-                  className="mt-0.5 shrink-0 text-[#9d741f]"
+                  size={16}
+                  className="mt-0.5 shrink-0 text-[#d8b760]"
                 />
-                <p className="text-xs leading-5 text-neutral-600">
-                  Your email is used only to verify one response for this poll.
-                  It is not shown publicly or added to a marketing list.
+                <p className="text-xs leading-5 text-white/55">
+                  Used only for one-time verification. Never published or added
+                  to a mailing list.
                 </p>
               </div>
+
+              <Message text={message} type={messageType} dark />
+
+              <button
+                type="submit"
+                disabled={submitting || !votingOpen}
+                className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#d6b45d] px-5 py-3.5 text-sm font-bold text-[#251c0b] transition hover:bg-[#e3c777] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Sending code
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+
+              <p className="mt-3 text-center text-[11px] leading-5 text-white/40">
+                {completionCount}/3 required details completed
+              </p>
             </div>
-
-            <Message text={message} type={messageType} />
-
-            <button
-              type="submit"
-              disabled={submitting || !votingOpen}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#7b1025] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#65101f] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Sending verification code
-                </>
-              ) : (
-                <>
-                  Continue to email verification
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </div>
+          </aside>
         </form>
       )}
 
       {step === "verify" && (
         <form
           onSubmit={handleVerifySubmit}
-          className="mt-5 rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-[0_24px_70px_rgba(30,25,18,0.08)] sm:p-8"
+          className="mx-auto mt-5 max-w-2xl rounded-3xl border border-black/8 bg-white p-5 shadow-[0_18px_60px_rgba(27,22,16,0.07)] sm:p-8"
         >
           <button
             type="button"
@@ -574,35 +690,30 @@ export function ElectorateIssuesForm({
               setOtp("");
               setMessage("");
             }}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-600 hover:text-neutral-950"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-500 hover:text-neutral-950"
           >
             <ArrowLeft size={17} />
-            Change response
+            Edit response
           </button>
 
-          <div className="mt-7 grid h-14 w-14 place-items-center rounded-2xl bg-[#7b1025] text-white">
-            <Mail size={25} />
+          <div className="mt-8 grid h-14 w-14 place-items-center rounded-2xl bg-[#7b1025] text-white">
+            <Mail size={24} />
           </div>
 
-          <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-[#9d741f]">
-            Email verification
+          <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-[#9d741f]">
+            Final step
           </p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
-            Enter your six-digit code
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.035em]">
+            Check your email
           </h2>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-600">
-            We sent a code to <strong>{email.trim().toLowerCase()}</strong>.
-            Verify it to count your response and reveal live results.
+          <p className="mt-3 text-sm leading-6 text-neutral-600">
+            Enter the six-digit code sent to{" "}
+            <strong>{email.trim().toLowerCase()}</strong>.
           </p>
 
-          <div className="mt-7 rounded-2xl border border-black/10 bg-neutral-50 p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-neutral-400">
-              Your selection
-            </p>
-            <p className="mt-2 font-semibold">{selectedElectorate}</p>
-            <p className="mt-1 text-sm text-neutral-600">
-              {selectedIssue?.label}
-            </p>
+          <div className="mt-6 grid gap-3 rounded-2xl bg-[#f8f5ee] p-4 sm:grid-cols-2">
+            <SummaryRow label="Electorate" value={selectedElectorate} />
+            <SummaryRow label="Issue" value={selectedIssue?.label || ""} />
           </div>
 
           <label
@@ -621,7 +732,7 @@ export function ElectorateIssuesForm({
               setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
             }
             placeholder="000000"
-            className="mt-2 h-16 w-full rounded-xl border border-black/10 bg-neutral-50 px-4 text-center text-2xl font-semibold tracking-[0.45em] outline-none transition focus:border-[#7b1025] focus:bg-white focus:ring-4 focus:ring-[#7b1025]/10"
+            className="mt-2 h-16 w-full rounded-2xl border border-black/10 bg-neutral-50 px-4 text-center text-2xl font-semibold tracking-[0.4em] outline-none transition focus:border-[#7b1025] focus:bg-white focus:ring-4 focus:ring-[#7b1025]/8"
           />
 
           <Message text={message} type={messageType} />
@@ -629,12 +740,12 @@ export function ElectorateIssuesForm({
           <button
             type="submit"
             disabled={submitting}
-            className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#7b1025] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#65101f] disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#7b1025] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#65101f] disabled:opacity-50"
           >
             {submitting ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                Verifying response
+                Verifying
               </>
             ) : (
               <>
@@ -648,11 +759,11 @@ export function ElectorateIssuesForm({
             type="button"
             disabled={submitting || resendCountdown > 0}
             onClick={requestVerification}
-            className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-black/10 px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-black/10 px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-50"
           >
             <RefreshCw size={16} />
             {resendCountdown > 0
-              ? `Resend code in ${resendCountdown}s`
+              ? `Resend in ${resendCountdown}s`
               : "Resend verification code"}
           </button>
         </form>
@@ -660,63 +771,54 @@ export function ElectorateIssuesForm({
 
       {step === "results" && (
         <div className="mt-5 space-y-5">
-          <div className="overflow-hidden rounded-[1.75rem] bg-[#161616] text-white shadow-[0_24px_70px_rgba(20,20,20,0.16)]">
-            <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr]">
+          <div className="overflow-hidden rounded-3xl bg-[#171717] p-6 text-white shadow-[0_18px_60px_rgba(20,20,20,0.14)] sm:p-8">
+            <div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:items-end">
               <div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 text-emerald-950">
-                  <CheckCircle2 size={25} />
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-400 text-emerald-950">
+                  <CheckCircle2 size={24} />
                 </div>
-                <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-[#d7b45b]">
+                <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-[#d8b760]">
                   Response verified
                 </p>
-                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
-                  Here is what your electorate is saying
+                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
+                  Your local result is live
                 </h2>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
                   Your response for {selectedElectorate} has been counted.
-                  Results update as more verified participants take part.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                <p className="text-xs font-bold uppercase tracking-[0.15em] text-white/45">
-                  Your response
-                </p>
-                <p className="mt-3 text-lg font-semibold">
-                  {selectedIssue?.label}
-                </p>
-                <p className="mt-2 text-sm text-white/55">
-                  {selectedElectorate}
-                </p>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <SummaryRow label="Your selection" value={selectedIssue?.label || ""} />
               </div>
             </div>
           </div>
 
           <ResultsPanel
-            eyebrow={`${selectedElectorate} results`}
+            eyebrow={selectedElectorate}
             title="Top issues in your electorate"
             total={electorateResponseCount}
             results={electorateResults}
             selectedOptionId={selectedOption}
-            emptyText="Your response may be the first verified response recorded for this electorate."
+            emptyText="Your response may be the first verified response for this electorate."
           />
 
           <ResultsPanel
-            eyebrow="Nationwide comparison"
-            title="What participants across New Zealand are prioritising"
+            eyebrow="New Zealand"
+            title="Nationwide comparison"
             total={nationalResponseCount}
             results={nationalResults}
             selectedOptionId={selectedOption}
             emptyText="National results will appear as verified responses are received."
           />
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white p-5 text-sm text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 rounded-2xl border border-black/8 bg-white p-4 text-xs leading-5 text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
             <p>
               Results reflect voluntary verified participants and are not a
-              representative opinion poll.
+              representative scientific opinion poll.
             </p>
             {lastUpdated && (
-              <p className="shrink-0 text-xs text-neutral-400">
+              <p className="shrink-0 text-neutral-400">
                 Updated{" "}
                 {new Intl.DateTimeFormat("en-NZ", {
                   dateStyle: "medium",
@@ -732,57 +834,57 @@ export function ElectorateIssuesForm({
   );
 }
 
-function Progress({ step }: { step: Step }) {
+function StepHeader({ step }: { step: Step }) {
   const active = step === "vote" ? 1 : step === "verify" ? 2 : 3;
-
-  const items = [
-    { number: 1, label: "Choose electorate and issue" },
-    { number: 2, label: "Verify email" },
-    { number: 3, label: "View live results" },
-  ];
+  const items = ["Choose", "Verify", "Results"];
 
   return (
-    <div className="grid grid-cols-3 overflow-hidden rounded-2xl border border-black/10 bg-white">
-      {items.map((item) => {
-        const complete = active > item.number;
-        const current = active === item.number;
+    <div className="rounded-2xl border border-black/8 bg-white p-2 shadow-sm">
+      <div className="grid grid-cols-3 gap-2">
+        {items.map((label, index) => {
+          const number = index + 1;
+          const current = number === active;
+          const complete = number < active;
 
-        return (
-          <div
-            key={item.number}
-            className={`relative flex min-h-20 flex-col justify-center px-3 py-3 text-center sm:min-h-16 sm:flex-row sm:items-center sm:gap-3 sm:text-left ${
-              current ? "bg-[#7b1025] text-white" : "text-neutral-500"
-            }`}
-          >
-            <span
-              className={`mx-auto grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold sm:mx-0 ${
+          return (
+            <div
+              key={label}
+              className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-2 text-xs font-semibold transition ${
                 current
-                  ? "bg-white text-[#7b1025]"
+                  ? "bg-[#7b1025] text-white"
                   : complete
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-neutral-100 text-neutral-500"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "text-neutral-400"
               }`}
             >
-              {complete ? <Check size={14} strokeWidth={3} /> : item.number}
-            </span>
-            <span className="mt-2 text-[11px] font-semibold leading-4 sm:mt-0 sm:text-xs">
-              {item.label}
-            </span>
-          </div>
-        );
-      })}
+              <span
+                className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-bold ${
+                  current
+                    ? "bg-white text-[#7b1025]"
+                    : complete
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-neutral-100 text-neutral-500"
+                }`}
+              >
+                {complete ? <Check size={13} strokeWidth={3} /> : number}
+              </span>
+              <span className="hidden sm:inline">{label}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function SectionLabel({
+function FieldHeading({
   number,
   title,
-  description,
+  text,
 }: {
   number: string;
   title: string;
-  description: string;
+  text: string;
 }) {
   return (
     <div className="flex items-start gap-3">
@@ -791,8 +893,19 @@ function SectionLabel({
       </span>
       <div>
         <h3 className="font-semibold text-neutral-950">{title}</h3>
-        <p className="mt-1 text-sm leading-5 text-neutral-500">{description}</p>
+        <p className="mt-1 text-sm leading-5 text-neutral-500">{text}</p>
       </div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] opacity-45">
+        {label}
+      </p>
+      <p className="mt-1.5 text-sm font-semibold leading-5">{value}</p>
     </div>
   );
 }
@@ -800,11 +913,30 @@ function SectionLabel({
 function Message({
   text,
   type,
+  dark = false,
 }: {
   text: string;
   type: MessageType;
+  dark?: boolean;
 }) {
   if (!text) return null;
+
+  if (dark) {
+    return (
+      <div
+        className={`mt-4 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs leading-5 ${
+          type === "error"
+            ? "bg-red-500/15 text-red-200"
+            : type === "success"
+              ? "bg-emerald-500/15 text-emerald-200"
+              : "bg-white/8 text-white/70"
+        }`}
+      >
+        <CircleAlert size={15} className="mt-0.5 shrink-0" />
+        {text}
+      </div>
+    );
+  }
 
   const styles =
     type === "error"
@@ -840,19 +972,19 @@ function ResultsPanel({
   );
 
   return (
-    <section className="rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-sm sm:p-7">
+    <section className="rounded-3xl border border-black/8 bg-white p-5 shadow-sm sm:p-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9d741f]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#9d741f]">
             {eyebrow}
           </p>
-          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.025em]">
+          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
             {title}
           </h3>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-600">
           <BarChart3 size={15} />
-          {total.toLocaleString("en-NZ")} verified responses
+          {total.toLocaleString("en-NZ")} verified
         </div>
       </div>
 
@@ -861,7 +993,7 @@ function ResultsPanel({
           {emptyText}
         </div>
       ) : (
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 space-y-3">
           {ordered.map((result, index) => {
             const selected = result.option_id === selectedOptionId;
             const percentage = Number(result.percentage ?? 0);
