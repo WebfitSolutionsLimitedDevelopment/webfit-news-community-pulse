@@ -1,5 +1,15 @@
 import { notFound } from "next/navigation";
-import { AlertTriangle, BarChart3, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  Clock3,
+  MailCheck,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BrandHeader } from "@/components/brand-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -7,6 +17,21 @@ import { StatusPill } from "@/components/status-pill";
 import { VotingForm } from "@/components/voting-form";
 
 export const dynamic = "force-dynamic";
+
+function formatDate(value: unknown) {
+  if (!value || typeof value !== "string") return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("en-NZ", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Pacific/Auckland",
+  }).format(date);
+}
 
 export default async function PollPage({
   params,
@@ -34,31 +59,41 @@ export default async function PollPage({
     .eq("is_active", true)
     .order("display_order");
 
-  let results:
-    | Array<{
-        option_id: string;
-        option_label: string;
-        vote_count: number;
-        percentage: number;
-      }>
-    | null = null;
-
-  if (poll.results_visibility !== "private") {
-    const { data } = await supabase.rpc("get_public_poll_results", {
+  const { data: responseSummary } = await supabase.rpc(
+    "get_public_poll_results",
+    {
       requested_poll_id: poll.id,
-    });
+    }
+  );
 
-    results = data;
-  }
+  const verifiedResponseCount = Array.isArray(responseSummary)
+    ? responseSummary.reduce(
+        (total, item) => total + Number(item.vote_count ?? 0),
+        0
+      )
+    : 0;
 
   const votingOpen = poll.status === "open";
+  const pollRecord = poll as Record<string, unknown>;
+
+  const opensAt = formatDate(
+    pollRecord.opens_at ?? pollRecord.start_at ?? pollRecord.open_at
+  );
+  const closesAt = formatDate(
+    pollRecord.closes_at ?? pollRecord.end_at ?? pollRecord.close_at
+  );
+  const partyListCheckedAt = formatDate(pollRecord.party_list_checked_at);
+  const partyRegisterSourceUrl =
+    typeof pollRecord.party_register_source_url === "string"
+      ? pollRecord.party_register_source_url
+      : null;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-neutral-50">
       <BrandHeader />
 
-      <main className="mx-auto max-w-5xl px-5 py-12 md:px-8 md:py-20">
-        <div className="mb-6 flex items-center gap-3">
+      <main className="mx-auto max-w-5xl px-5 py-10 md:px-8 md:py-16">
+        <div className="mb-6 flex flex-wrap items-center gap-3">
           <StatusPill status={poll.status} />
 
           <span className="text-xs font-bold uppercase tracking-[0.22em] text-neutral-400">
@@ -66,76 +101,118 @@ export default async function PollPage({
           </span>
         </div>
 
-        <h1 className="text-balance text-4xl font-semibold tracking-[-0.04em] md:text-6xl">
-          {poll.title}
-        </h1>
+        <section className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-sm">
+          <div className="h-1.5 bg-gradient-to-r from-[#7b1025] to-[#b88a2a]" />
 
-        <p className="mt-6 text-xl leading-8 text-neutral-700">
-          {poll.question}
-        </p>
+          <div className="p-7 md:p-10">
+            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#9d741f]">
+              2026 New Zealand General Election
+            </p>
 
-        {poll.description && (
-          <p className="mt-5 max-w-3xl leading-8 text-neutral-500">
-            {poll.description}
+            <h1 className="mt-4 text-balance text-4xl font-semibold tracking-[-0.04em] md:text-6xl">
+              New Zealand votes in November. Where does public opinion stand
+              today?
+            </h1>
+
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-neutral-700 md:text-xl">
+              Take the Webfit News Community Pulse poll and see how
+              participating readers are thinking about the 2026 General
+              Election. Voting takes around 30 seconds.
+            </p>
+
+            <div className="mt-7 flex flex-wrap gap-3 text-sm text-neutral-600">
+              <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2">
+                <CalendarDays size={16} className="text-[#7b1025]" />
+                Election day: Saturday, 7 November 2026
+              </span>
+
+              {opensAt && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2">
+                  <Clock3 size={16} className="text-[#7b1025]" />
+                  Opened {opensAt}
+                </span>
+              )}
+
+              {closesAt && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2">
+                  <Clock3 size={16} className="text-[#7b1025]" />
+                  Closes {closesAt}
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-[1.5rem] border border-[#b88a2a]/30 bg-[#faf7ef] p-5 md:p-6">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#7b1025] text-white">
+              <Users size={21} />
+            </div>
+
+            <div>
+              <p className="text-2xl font-semibold text-neutral-950">
+                {verifiedResponseCount.toLocaleString("en-NZ")}
+              </p>
+              <p className="text-sm text-neutral-600">
+                verified participants have responded
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-6 grid gap-4 md:grid-cols-3">
+          <TrustPoint
+            icon={<CheckCircle2 size={20} />}
+            text="One verified response per verified email address"
+          />
+          <TrustPoint
+            icon={<MailCheck size={20} />}
+            text="Email addresses are not added to marketing lists"
+          />
+          <TrustPoint
+            icon={<BarChart3 size={20} />}
+            text="Results represent participants, not all New Zealand voters"
+          />
+        </section>
+
+        <section className="mt-10">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
+            Your party vote
           </p>
-        )}
 
-        {results ? (
-          <section className="mt-10 space-y-5">
-            {options?.map((option) => {
-              const result = results.find(
-                (item) => item.option_id === option.id
-              );
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight">
+            {poll.question}
+          </h2>
 
-              const percentage = Number(result?.percentage ?? 0);
+          {poll.description && (
+            <p className="mt-4 max-w-3xl leading-7 text-neutral-600">
+              {poll.description}
+            </p>
+          )}
+        </section>
 
-              return (
-                <article
-                  key={option.id}
-                  className="luxury-border rounded-[1.5rem] bg-white p-5 md:p-6"
-                >
-                  <div className="flex items-center justify-between gap-5">
-                    <div>
-                      <h2 className="text-lg font-semibold">{option.label}</h2>
+        <details className="group mt-6 rounded-[1.5rem] border border-black/10 bg-white p-5 shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
+            <span>What is the party vote?</span>
+            <ChevronDown className="shrink-0 transition group-open:rotate-180" />
+          </summary>
 
-                      {option.description && (
-                        <p className="mt-1 text-sm text-neutral-500">
-                          {option.description}
-                        </p>
-                      )}
-                    </div>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-neutral-600">
+            Under New Zealand&apos;s MMP system, your party vote largely
+            determines each party&apos;s share of seats in Parliament. Your
+            electorate vote chooses the person you want to represent your local
+            electorate.
+          </p>
+        </details>
 
-                    <div className="text-right">
-                      <p className="text-2xl font-semibold text-[#7b1025]">
-                        {percentage.toFixed(1)}%
-                      </p>
-
-                      <p className="text-xs text-neutral-400">
-                        {result?.vote_count ?? 0} responses
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-[#7b1025] to-[#b88a2a]"
-                      style={{ width: `${Math.min(100, percentage)}%` }}
-                    />
-                  </div>
-                </article>
-              );
-            })}
-          </section>
-        ) : (
+        {votingOpen ? (
           <VotingForm
             pollId={poll.id}
             pollSlug={poll.slug}
             votingOpen={votingOpen}
             options={options ?? []}
           />
-        )}
-
-        {!votingOpen && !results && (
+        ) : (
           <div className="mt-8 rounded-[1.5rem] border border-amber-300 bg-amber-50 p-5">
             <p className="font-semibold text-amber-950">
               Voting is currently unavailable.
@@ -147,54 +224,92 @@ export default async function PollPage({
           </div>
         )}
 
-        <section className="mt-10 grid gap-5 md:grid-cols-2">
-          <div className="rounded-[1.5rem] border border-amber-300/60 bg-amber-50 p-6">
-            <div className="flex gap-3">
-              <AlertTriangle className="mt-1 shrink-0 text-amber-700" />
+        {(partyListCheckedAt || partyRegisterSourceUrl) && (
+          <section className="mt-8 rounded-[1.5rem] border border-black/10 bg-white p-5 text-sm text-neutral-600">
+            <p className="font-semibold text-neutral-900">
+              Party register information
+            </p>
 
-              <div>
-                <h3 className="font-semibold">Important notice</h3>
+            {partyListCheckedAt && (
+              <p className="mt-2">Party list last checked: {partyListCheckedAt}</p>
+            )}
 
-                <p className="mt-2 text-sm leading-6 text-amber-950/75">
-                  {poll.disclaimer}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[1.5rem] border border-black/10 bg-white p-6">
-            <div className="flex gap-3">
-              <ShieldCheck className="mt-1 shrink-0 text-[#7b1025]" />
-
-              <div>
-                <h3 className="font-semibold">Privacy</h3>
-
-                <p className="mt-2 text-sm leading-6 text-neutral-600">
-                  {poll.privacy_notice}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {poll.methodology && (
-          <section className="mt-8 rounded-[1.5rem] border border-black/10 bg-white p-6">
-            <div className="flex gap-3">
-              <BarChart3 className="mt-1 shrink-0 text-[#9d741f]" />
-
-              <div>
-                <h3 className="font-semibold">Methodology</h3>
-
-                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-neutral-600">
-                  {poll.methodology}
-                </p>
-              </div>
-            </div>
+            {partyRegisterSourceUrl && (
+              <a
+                href={partyRegisterSourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block font-semibold text-[#7b1025] hover:underline"
+              >
+                Source: New Zealand Electoral Commission
+              </a>
+            )}
           </section>
         )}
+
+        <section className="mt-8 space-y-4">
+          <details className="group rounded-[1.5rem] border border-amber-300/60 bg-amber-50 p-5 md:p-6">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <span className="flex items-center gap-3 font-semibold">
+                <AlertTriangle className="shrink-0 text-amber-700" />
+                Important notice
+              </span>
+              <ChevronDown className="shrink-0 transition group-open:rotate-180" />
+            </summary>
+
+            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-amber-950/75">
+              {poll.disclaimer}
+            </p>
+          </details>
+
+          <details className="group rounded-[1.5rem] border border-black/10 bg-white p-5 md:p-6">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <span className="flex items-center gap-3 font-semibold">
+                <ShieldCheck className="shrink-0 text-[#7b1025]" />
+                Privacy
+              </span>
+              <ChevronDown className="shrink-0 transition group-open:rotate-180" />
+            </summary>
+
+            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-neutral-600">
+              {poll.privacy_notice}
+            </p>
+          </details>
+
+          {poll.methodology && (
+            <details className="group rounded-[1.5rem] border border-black/10 bg-white p-5 md:p-6">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+                <span className="flex items-center gap-3 font-semibold">
+                  <BarChart3 className="shrink-0 text-[#9d741f]" />
+                  Methodology
+                </span>
+                <ChevronDown className="shrink-0 transition group-open:rotate-180" />
+              </summary>
+
+              <p className="mt-4 whitespace-pre-line text-sm leading-7 text-neutral-600">
+                {poll.methodology}
+              </p>
+            </details>
+          )}
+        </section>
       </main>
 
       <SiteFooter />
+    </div>
+  );
+}
+
+function TrustPoint({
+  icon,
+  text,
+}: {
+  icon: React.ReactNode;
+  text: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-[1.25rem] border border-black/10 bg-white p-4 shadow-sm">
+      <span className="mt-0.5 text-[#7b1025]">{icon}</span>
+      <p className="text-sm font-medium leading-6 text-neutral-700">{text}</p>
     </div>
   );
 }

@@ -4,6 +4,60 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const MAX_FAILED_ATTEMPTS = 5;
 
+const VALID_ELIGIBILITY_STATUSES = [
+  "nz_resident",
+  "eligible_overseas",
+  "not_eligible",
+  "prefer_not_to_say",
+] as const;
+
+const VALID_REGIONS = [
+  "Northland",
+  "Auckland",
+  "Waikato",
+  "Bay of Plenty",
+  "Gisborne",
+  "Hawke's Bay",
+  "Taranaki",
+  "Manawatū-Whanganui",
+  "Wellington",
+  "Tasman",
+  "Nelson",
+  "Marlborough",
+  "West Coast",
+  "Canterbury",
+  "Otago",
+  "Southland",
+  "Overseas",
+  "Prefer not to say",
+] as const;
+
+const VALID_AGE_RANGES = [
+  "18-24",
+  "25-34",
+  "35-44",
+  "45-54",
+  "55-64",
+  "65+",
+  "Under 18",
+  "Prefer not to say",
+] as const;
+
+const VALID_MAIN_ISSUES = [
+  "Cost of living",
+  "Health",
+  "Housing",
+  "Economy and jobs",
+  "Crime and public safety",
+  "Education",
+  "Immigration",
+  "Climate and environment",
+  "Māori and Treaty issues",
+  "Taxation",
+  "Other",
+  "Prefer not to say",
+] as const;
+
 function hashValue(value: string) {
   const secret = process.env.OTP_HASH_SECRET;
 
@@ -12,6 +66,19 @@ function hashValue(value: string) {
   }
 
   return createHmac("sha256", secret).update(value).digest("hex");
+}
+
+function optionalAllowedValue<T extends readonly string[]>(
+  value: unknown,
+  allowedValues: T
+): T[number] | null {
+  const normalised = String(value || "").trim();
+
+  if (!normalised) return null;
+
+  return allowedValues.includes(normalised as T[number])
+    ? (normalised as T[number])
+    : null;
 }
 
 export async function POST(request: Request) {
@@ -23,7 +90,10 @@ export async function POST(request: Request) {
     const verificationId = String(body.verificationId || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const otp = String(body.otp || "").trim();
-    const locationDeclaration = body.locationDeclaration === true;
+    const eligibilityStatus = String(body.eligibilityStatus || "").trim();
+    const region = optionalAllowedValue(body.region, VALID_REGIONS);
+    const ageRange = optionalAllowedValue(body.ageRange, VALID_AGE_RANGES);
+    const mainIssue = optionalAllowedValue(body.mainIssue, VALID_MAIN_ISSUES);
 
     if (!pollId || !optionId || !verificationId || !email || !otp) {
       return NextResponse.json(
@@ -39,32 +109,19 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!locationDeclaration) {
+    if (
+      !VALID_ELIGIBILITY_STATUSES.includes(
+        eligibilityStatus as (typeof VALID_ELIGIBILITY_STATUSES)[number]
+      )
+    ) {
       return NextResponse.json(
-        {
-          error:
-            "You must confirm that you are currently located in New Zealand.",
-        },
+        { error: "Please select the option that best describes you." },
         { status: 400 }
       );
     }
 
-    /*
-      On Vercel, this header normally contains the visitor's country code.
-      It may be absent during local development.
-    */
     const detectedCountry =
       request.headers.get("x-vercel-ip-country")?.toUpperCase() || "";
-
-    if (detectedCountry && detectedCountry !== "NZ") {
-      return NextResponse.json(
-        {
-          error:
-            "This community poll is currently limited to people connecting from New Zealand.",
-        },
-        { status: 403 }
-      );
-    }
 
     const admin = createAdminClient();
 
@@ -74,9 +131,7 @@ export async function POST(request: Request) {
       .eq("id", pollId)
       .maybeSingle();
 
-    if (pollError) {
-      throw new Error(pollError.message);
-    }
+    if (pollError) throw new Error(pollError.message);
 
     if (!poll || !poll.is_public || poll.status !== "open") {
       return NextResponse.json(
@@ -93,9 +148,7 @@ export async function POST(request: Request) {
       .eq("is_active", true)
       .maybeSingle();
 
-    if (optionError) {
-      throw new Error(optionError.message);
-    }
+    if (optionError) throw new Error(optionError.message);
 
     if (!option) {
       return NextResponse.json(
@@ -113,9 +166,7 @@ export async function POST(request: Request) {
       .eq("email_hash", emailHash)
       .maybeSingle();
 
-    if (existingVoteError) {
-      throw new Error(existingVoteError.message);
-    }
+    if (existingVoteError) throw new Error(existingVoteError.message);
 
     if (existingVote) {
       return NextResponse.json(
@@ -149,9 +200,7 @@ export async function POST(request: Request) {
       .eq("email_hash", emailHash)
       .maybeSingle();
 
-    if (verificationError) {
-      throw new Error(verificationError.message);
-    }
+    if (verificationError) throw new Error(verificationError.message);
 
     if (!verification) {
       return NextResponse.json(
@@ -199,14 +248,11 @@ export async function POST(request: Request) {
     const expectedOtpHash = hashValue(`${pollId}:${email}:${otp}`);
 
     if (expectedOtpHash !== verification.otp_hash) {
-      const nextFailedAttempts =
-        (verification.failed_attempts ?? 0) + 1;
+      const nextFailedAttempts = (verification.failed_attempts ?? 0) + 1;
 
       await admin
         .from("otp_requests")
-        .update({
-          failed_attempts: nextFailedAttempts,
-        })
+        .update({ failed_attempts: nextFailedAttempts })
         .eq("id", verification.id);
 
       const attemptsRemaining = Math.max(
@@ -249,7 +295,24 @@ export async function POST(request: Request) {
       riskScore += 5;
     }
 
-    const { data: previousDeviceVote } = deviceHash
+    if (
+      detectedCountry &&
+      detectedCountry !== "NZ" &&
+      eligibilityStatus === "nz_resident"
+    ) {
+      riskFlags.push("nz_resident_detected_overseas");
+      riskScore += 20;
+    }
+
+    if (
+      detectedCountry === "NZ" &&
+      eligibilityStatus === "eligible_overseas"
+    ) {
+      riskFlags.push("overseas_voter_detected_in_nz");
+      riskScore += 10;
+    }
+
+    const { data: previousDeviceVote, error: deviceCheckError } = deviceHash
       ? await admin
           .from("votes")
           .select("id")
@@ -257,7 +320,9 @@ export async function POST(request: Request) {
           .eq("device_hash", deviceHash)
           .limit(1)
           .maybeSingle()
-      : { data: null };
+      : { data: null, error: null };
+
+    if (deviceCheckError) throw new Error(deviceCheckError.message);
 
     if (previousDeviceVote) {
       riskFlags.push("device_previously_used");
@@ -273,6 +338,10 @@ export async function POST(request: Request) {
         email_hash: emailHash,
         ip_hash: ipHash,
         device_hash: deviceHash,
+        eligibility_status: eligibilityStatus,
+        participant_region: region,
+        participant_age_range: ageRange,
+        main_election_issue: mainIssue,
         status: riskScore >= 50 ? "flagged" : "valid",
         risk_score: riskScore,
         risk_flags: riskFlags,
@@ -299,9 +368,7 @@ export async function POST(request: Request) {
 
     const { error: consumeError } = await admin
       .from("otp_requests")
-      .update({
-        consumed_at: new Date().toISOString(),
-      })
+      .update({ consumed_at: new Date().toISOString() })
       .eq("id", verification.id)
       .is("consumed_at", null);
 
@@ -319,12 +386,31 @@ export async function POST(request: Request) {
         option_id: optionId,
         option_label: option.label,
         vote_status: vote.status,
+        eligibility_status: eligibilityStatus,
+        participant_region: region,
+        participant_age_range: ageRange,
+        main_election_issue: mainIssue,
         risk_score: riskScore,
         risk_flags: riskFlags,
         detected_country: detectedCountry || null,
       },
       ip_hash: ipHash,
     });
+
+    const { data: results, error: resultsError } = await admin.rpc(
+      "get_public_poll_results",
+      { requested_poll_id: pollId }
+    );
+
+    if (resultsError) {
+      console.error("Post-vote results load failed:", resultsError);
+    }
+
+    const resultRows = Array.isArray(results) ? results : [];
+    const totalVerifiedResponses = resultRows.reduce(
+      (total, row) => total + Number(row.vote_count ?? 0),
+      0
+    );
 
     return NextResponse.json({
       success: true,
@@ -334,14 +420,16 @@ export async function POST(request: Request) {
         vote.status === "flagged"
           ? "Your response has been received and is awaiting integrity review."
           : "Your verified response has been recorded.",
+      results: resultRows,
+      totalVerifiedResponses,
+      lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Vote verification error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Unable to verify and record your response. Please try again.",
+        error: "Unable to verify and record your response. Please try again.",
       },
       { status: 500 }
     );
