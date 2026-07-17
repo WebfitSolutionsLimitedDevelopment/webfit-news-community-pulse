@@ -2,10 +2,10 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  Check,
   CheckCircle2,
   Clock3,
   Mail,
-  MapPin,
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
@@ -44,9 +44,9 @@ export function VotingForm({
   const [verificationId, setVerificationId] = useState("");
   const [otp, setOtp] = useState("");
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"error" | "info" | "success">(
-    "info"
-  );
+  const [messageType, setMessageType] = useState<
+    "error" | "info" | "success"
+  >("info");
   const [submitting, setSubmitting] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
 
@@ -88,7 +88,7 @@ export function VotingForm({
     }
 
     if (!selectedOption) {
-      showMessage("Please select one option.", "error");
+      showMessage("Please select one party or response option.", "error");
       return;
     }
 
@@ -146,7 +146,9 @@ export function VotingForm({
       setResendCountdown(RESEND_WAIT_SECONDS);
 
       showMessage(
-        `A six-digit verification code has been sent to ${email.trim().toLowerCase()}.`,
+        `A six-digit verification code has been sent to ${email
+          .trim()
+          .toLowerCase()}.`,
         "success"
       );
     } catch {
@@ -373,48 +375,103 @@ export function VotingForm({
         </div>
 
         <div>
-          <h2 className="text-2xl font-semibold">Select your response</h2>
+          <h2 className="text-2xl font-semibold">
+            Select your party vote preference
+          </h2>
 
           <p className="mt-2 leading-7 text-neutral-500">
-            Choose one option and verify your email before your response is
-            counted.
+            Choose one party or response option. You will verify your email
+            before your response is counted.
           </p>
         </div>
       </div>
 
-      <fieldset disabled={!votingOpen || submitting} className="mt-8 space-y-3">
-        {options.map((option) => (
-          <label
-            key={option.id}
-            className={`flex cursor-pointer items-start gap-4 rounded-[1.25rem] border p-5 transition ${
-              selectedOption === option.id
-                ? "border-[#7b1025] bg-[#7b1025]/5 shadow-sm"
-                : "border-black/10 hover:border-[#b88a2a]"
-            }`}
-          >
-            <input
-              type="radio"
-              name="poll-option"
-              value={option.id}
-              checked={selectedOption === option.id}
-              onChange={(event) => setSelectedOption(event.target.value)}
-              className="mt-1 h-5 w-5 accent-[#7b1025]"
-            />
+      <fieldset
+        disabled={!votingOpen || submitting}
+        className="mt-8 grid gap-4 md:grid-cols-2"
+      >
+        {options.map((option) => {
+          const selected = selectedOption === option.id;
 
-            <span>
-              <span className="block font-semibold">{option.label}</span>
+          return (
+            <label
+              key={option.id}
+              className={`group relative cursor-pointer rounded-[1.5rem] border p-5 transition ${
+                selected
+                  ? "border-[#7b1025] bg-[#7b1025]/5 shadow-md ring-2 ring-[#7b1025]/20"
+                  : "border-black/10 bg-white hover:-translate-y-0.5 hover:border-[#b88a2a] hover:shadow-lg"
+              }`}
+            >
+              <input
+                type="radio"
+                name="poll-option"
+                value={option.id}
+                checked={selected}
+                onChange={(event) => setSelectedOption(event.target.value)}
+                className="sr-only"
+              />
 
-              {option.description && (
-                <span className="mt-1 block text-sm leading-6 text-neutral-500">
-                  {option.description}
-                </span>
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-black/10 bg-white">
+                  {option.logo_url ? (
+                    <img
+                      src={option.logo_url}
+                      alt={`${option.label} logo`}
+                      className="h-12 w-12 object-contain"
+                    />
+                  ) : (
+                    <span className="px-2 text-center text-xs font-semibold text-neutral-400">
+                      {option.short_label || option.label}
+                    </span>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold leading-6 text-neutral-900">
+                    {option.label}
+                  </h3>
+
+                  {option.short_label && (
+                    <p className="mt-1 text-sm font-medium text-[#7b1025]">
+                      {option.short_label}
+                    </p>
+                  )}
+                </div>
+
+                <div
+                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border transition ${
+                    selected
+                      ? "border-[#7b1025] bg-[#7b1025] text-white"
+                      : "border-black/20 bg-white text-transparent"
+                  }`}
+                >
+                  <Check size={16} strokeWidth={3} />
+                </div>
+              </div>
+
+              {selected && (
+                <p className="mt-4 rounded-xl bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+                  Selected
+                </p>
               )}
-            </span>
-          </label>
-        ))}
+            </label>
+          );
+        })}
       </fieldset>
 
       <div className="mt-8 border-t border-black/10 pt-8">
+        <div className="mb-5 rounded-[1.25rem] border border-[#b88a2a]/30 bg-[#f8f3e7] p-4">
+          <p className="font-semibold text-neutral-900">
+            Why do we need your email?
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-neutral-600">
+            We send a one-time verification code to reduce duplicate
+            responses. Your email will not appear with your vote and will not
+            be added to a mailing list.
+          </p>
+        </div>
+
         <label className="block">
           <span className="flex items-center gap-2 text-sm font-semibold">
             <Mail size={17} className="text-[#7b1025]" />
@@ -432,7 +489,7 @@ export function VotingForm({
           />
 
           <span className="mt-2 block text-xs leading-5 text-neutral-500">
-            Your email will only be used to verify one response for this poll.
+            Used only to verify one response for this poll.
           </span>
         </label>
 
@@ -446,8 +503,7 @@ export function VotingForm({
           />
 
           <span>
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <MapPin size={16} className="text-[#7b1025]" />
+            <span className="text-sm font-semibold">
               New Zealand location confirmation
             </span>
 
