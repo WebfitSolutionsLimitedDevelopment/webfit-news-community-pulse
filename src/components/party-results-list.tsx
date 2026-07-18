@@ -42,6 +42,13 @@ function responseLabel(count: number) {
   return `${count.toLocaleString("en-NZ")} ${count === 1 ? "response" : "responses"}`;
 }
 
+function getCompetitionRank(party: PartyResult, parties: PartyResult[]) {
+  return (
+    1 +
+    parties.filter((item) => item.voteCount > party.voteCount).length
+  );
+}
+
 export function PartyResultsList({ parties }: { parties: PartyResult[] }) {
   const [showAll, setShowAll] = useState(false);
   const partiesWithVotes = parties.filter((party) => party.voteCount > 0);
@@ -51,11 +58,13 @@ export function PartyResultsList({ parties }: { parties: PartyResult[] }) {
   return (
     <div className="mt-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-        {visibleParties.map((party) => {
-          const rank = parties.findIndex((item) => item.key === party.key) + 1;
-
-          return <PartyResultCard key={party.key} party={party} rank={rank} />;
-        })}
+        {visibleParties.map((party) => (
+          <PartyResultCard
+            key={party.key}
+            party={party}
+            rank={getCompetitionRank(party, parties)}
+          />
+        ))}
       </div>
 
       {zeroVoteParties.length > 0 && (
@@ -67,7 +76,7 @@ export function PartyResultsList({ parties }: { parties: PartyResult[] }) {
         >
           {showAll ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
           {showAll
-            ? "Hide parties with no responses"
+            ? "Show fewer parties"
             : `Show all parties (${zeroVoteParties.length} with no responses)`}
         </button>
       )}

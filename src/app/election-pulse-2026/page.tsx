@@ -208,8 +208,14 @@ export default async function ElectionPulsePage() {
   const headlineParties = parties.filter(
     (party) => !NON_LEADER_PARTY_KEYS.has(party.key),
   );
-  const leadingParty =
-    headlineParties.find((party) => party.voteCount > 0) ?? null;
+  const topVoteCount = headlineParties.reduce(
+    (highest, party) => Math.max(highest, party.voteCount),
+    0,
+  );
+  const leadingParties =
+    topVoteCount > 0
+      ? headlineParties.filter((party) => party.voteCount === topVoteCount)
+      : [];
   const activeElectorates = electorates.filter(
     (electorate) => electorate.status === "open",
   ).length;
@@ -310,11 +316,13 @@ export default async function ElectionPulsePage() {
                       All verified responses
                     </h2>
                   </div>
-                  {leadingParty && (
+                  {leadingParties.length > 0 && (
                     <div className="inline-flex items-center gap-2 rounded-full bg-[#7b1025]/8 px-4 py-2 text-sm font-semibold text-[#7b1025]">
                       <Trophy size={16} />
-                      Current leader:{" "}
-                      {leadingParty.shortLabel || leadingParty.label}
+                      {leadingParties.length === 1 ? "Current leader: " : "Current joint leaders: "}
+                      {formatPartyList(
+                        leadingParties.map((party) => getPartyDisplayName(party)),
+                      )}
                     </div>
                   )}
                 </div>
@@ -438,8 +446,8 @@ export default async function ElectionPulsePage() {
                       )}
 
                       <p className="mt-5 border-t border-black/10 pt-4 text-xs font-medium text-neutral-500">
-                        {electorate.totalResponses.toLocaleString("en-NZ")}{" "}
-                        verified responses
+                        {electorate.totalResponses.toLocaleString("en-NZ")} verified{" "}
+                        {electorate.totalResponses === 1 ? "response" : "responses"}
                       </p>
                     </Link>
                   ))}
@@ -452,6 +460,12 @@ export default async function ElectionPulsePage() {
       <SiteFooter />
     </div>
   );
+}
+
+function formatPartyList(names: string[]) {
+  if (names.length <= 1) return names[0] || "";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
 function MetricCard({
