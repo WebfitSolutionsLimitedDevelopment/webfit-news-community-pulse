@@ -57,10 +57,12 @@ export default async function HomePage() {
   const { data: polls } = await supabase
     .from("polls")
     .select(
-      "id, slug, title, question, description, status, results_visibility, ends_at"
+      "id, slug, title, question, description, status, results_visibility, ends_at, poll_type"
     )
     .eq("is_public", true)
     .order("created_at", { ascending: false });
+
+  const featuredPolls = (polls ?? []).filter((poll) => poll.poll_type !== "electorate_party_vote");
 
   return (
     <div className="min-h-screen">
@@ -134,10 +136,16 @@ export default async function HomePage() {
                 <p className="mt-1 text-sm leading-6 text-white/65">See combined participant results and electorate-by-electorate leaders.</p>
               </div>
             </div>
-            <Link href="/election-pulse-2026" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white bg-white px-6 py-3 font-bold !text-[#17130f] shadow-sm transition hover:bg-[#f4ead2] hover:!text-[#17130f]">
-              View dashboard
-              <ArrowRight size={18} />
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/electorates-2026" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-[#d9b45d] px-6 py-3 font-bold text-[#f2d58b] transition hover:bg-white/10">
+                Choose electorate
+                <ArrowRight size={18} />
+              </Link>
+              <Link href="/election-pulse-2026" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white bg-white px-6 py-3 font-bold !text-[#17130f] shadow-sm transition hover:bg-[#f4ead2] hover:!text-[#17130f]">
+                View dashboard
+                <ArrowRight size={18} />
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -154,7 +162,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {!polls?.length ? (
+          {!featuredPolls.length ? (
             <div className="luxury-border rounded-[2rem] bg-white p-10 text-center">
               <h3 className="text-2xl font-semibold">
                 No public poll is live yet
@@ -167,7 +175,7 @@ export default async function HomePage() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2">
-              {polls.map((poll) => (
+              {featuredPolls.map((poll) => (
                 <article
                   key={poll.id}
                   className="luxury-border group rounded-[2rem] bg-white p-7 transition hover:-translate-y-1 hover:shadow-2xl"

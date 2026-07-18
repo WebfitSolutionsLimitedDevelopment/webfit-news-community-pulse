@@ -28,6 +28,10 @@ export type Poll = {
   is_public: boolean;
   created_at: string;
   updated_at: string;
+  poll_type?: string;
+  electorate_name?: string | null;
+  electorate_code?: string | null;
+  electorate_type?: "general" | "maori" | null;
 };
 
 export type PollOption = {
@@ -41,4 +45,5 @@ export type PollOption = {
   website_url: string | null;
   display_order: number;
   is_active: boolean;
+  party_key?: string | null;
 };
