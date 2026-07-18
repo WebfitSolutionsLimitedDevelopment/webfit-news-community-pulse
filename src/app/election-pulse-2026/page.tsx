@@ -11,6 +11,7 @@ import {
 import { BrandHeader } from "@/components/brand-header";
 import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
 import { PartyLogo } from "@/components/party-logo";
+import { PartyResultsList } from "@/components/party-results-list";
 import { SiteFooter } from "@/components/site-footer";
 import { createClient } from "@/lib/supabase/server";
 
@@ -330,15 +331,7 @@ export default async function ElectionPulsePage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                    {parties.map((party, index) => (
-                      <PartyResultCard
-                        key={party.key}
-                        party={party}
-                        rank={index + 1}
-                      />
-                    ))}
-                  </div>
+                  <PartyResultsList parties={parties} />
                 )}
               </div>
 
@@ -424,6 +417,7 @@ export default async function ElectionPulsePage() {
                           </p>
                           <div className="mt-3 flex items-center gap-3">
                             <PartyLogo
+                              partyKey={electorate.leader.key}
                               label={electorate.leader.label}
                               logoUrl={electorate.leader.logoUrl}
                             />
@@ -488,52 +482,4 @@ function getPartyDisplayName(
   party: Pick<PartySummary, "key" | "label" | "shortLabel">,
 ) {
   return party.shortLabel || SHORT_PARTY_NAMES[party.key] || party.label;
-}
-
-function PartyResultCard({
-  party,
-  rank,
-}: {
-  party: PartySummary;
-  rank: number;
-}) {
-  return (
-    <article className="rounded-[1.25rem] border border-black/10 p-3.5 sm:p-4">
-      <div className="flex items-center gap-3 sm:gap-4">
-        <span className="w-6 shrink-0 text-center text-sm font-bold text-neutral-400">
-          {rank}
-        </span>
-        <PartyLogo label={party.label} logoUrl={party.logoUrl} size="sm" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="truncate font-semibold">
-                {getPartyDisplayName(party)}
-              </h3>
-              <p className="mt-1 text-[11px] leading-5 text-neutral-500">
-                {party.voteCount.toLocaleString("en-NZ")} responses · leading{" "}
-                {party.electorateLeads} electorate poll
-                {party.electorateLeads === 1 ? "" : "s"}
-              </p>
-            </div>
-            <p className="shrink-0 text-lg font-semibold text-[#7b1025]">
-              {party.rawShare.toFixed(1)}%
-            </p>
-          </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-100">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-[#7b1025] to-[#b88a2a]"
-              style={{ width: `${Math.min(100, party.rawShare)}%` }}
-            />
-          </div>
-          <p className="mt-2 text-[11px] text-neutral-500">
-            Equal-electorate average:{" "}
-            <strong className="text-neutral-700">
-              {party.equalElectorateShare.toFixed(1)}%
-            </strong>
-          </p>
-        </div>
-      </div>
-    </article>
-  );
 }
