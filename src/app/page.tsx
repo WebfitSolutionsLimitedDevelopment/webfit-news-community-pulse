@@ -9,6 +9,7 @@ import {
   LockKeyhole,
   Newspaper,
   Scale,
+  BarChart3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BrandHeader } from "@/components/brand-header";
@@ -118,6 +119,25 @@ export default async function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="border-b border-black/10 bg-[#17130f] text-white">
+          <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-8 sm:flex-row sm:items-center sm:justify-between md:px-8">
+            <div className="flex items-start gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#b88a2a] text-white">
+                <BarChart3 size={22} />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#d9b45d]">Election Pulse 2026</p>
+                <h2 className="mt-1 text-xl font-semibold">View the electorate party vote dashboard</h2>
+                <p className="mt-1 text-sm leading-6 text-white/65">See combined participant results and electorate-by-electorate leaders.</p>
+              </div>
+            </div>
+            <Link href="/election-pulse-2026" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white bg-white px-6 py-3 font-bold !text-[#17130f] shadow-sm transition hover:bg-[#f4ead2] hover:!text-[#17130f]">
+              View dashboard
+              <ArrowRight size={18} />
+            </Link>
           </div>
         </section>
 

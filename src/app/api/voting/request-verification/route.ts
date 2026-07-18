@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (poll.poll_type === "party_vote") {
+    if (poll.poll_type === "party_vote" || poll.poll_type === "electorate_party_vote") {
       if (
         !VALID_ELIGIBILITY_STATUSES.includes(
           eligibilityStatus as (typeof VALID_ELIGIBILITY_STATUSES)[number]
@@ -227,6 +227,42 @@ export async function POST(request: Request) {
       );
     }
 
+    if (poll.poll_type === "electorate_party_vote") {
+      const { data: electoratePartyPolls, error: electoratePollsError } =
+        await admin
+          .from("polls")
+          .select("id")
+          .eq("poll_type", "electorate_party_vote");
+
+      if (electoratePollsError) throw new Error(electoratePollsError.message);
+
+      const electoratePartyPollIds = (electoratePartyPolls ?? []).map(
+        (item) => item.id
+      );
+
+      if (electoratePartyPollIds.length > 0) {
+        const { data: electorateVote, error: electorateVoteError } = await admin
+          .from("votes")
+          .select("id, poll_id")
+          .eq("email_hash", emailHash)
+          .in("poll_id", electoratePartyPollIds)
+          .limit(1)
+          .maybeSingle();
+
+        if (electorateVoteError) throw new Error(electorateVoteError.message);
+
+        if (electorateVote) {
+          return NextResponse.json(
+            {
+              error:
+                "This email has already participated in an electorate party vote poll. Only one electorate response is permitted.",
+            },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
     const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
 
     const { count: recentRequestCount, error: recentRequestError } =
@@ -283,7 +319,7 @@ export async function POST(request: Request) {
     const safeElectorateName = escapeHtml(electorateName);
 
     const selectionDetails =
-      poll.poll_type === "electorate_issue"
+      (poll.poll_type === "electorate_issue" || poll.poll_type === "electorate_party_vote")
         ? `
           <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#666666;">
             ${safeElectorateName}

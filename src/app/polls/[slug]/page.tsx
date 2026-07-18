@@ -18,6 +18,7 @@ import { StatusPill } from "@/components/status-pill";
 import { VotingForm } from "@/components/voting-form";
 import { ElectorateIssuesForm } from "@/components/electorate-issues-form";
 import { HouseholdFinanceForm } from "@/components/household-finance-form";
+import { ElectoratePartyVoteForm } from "@/components/electorate-party-vote-form";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,11 @@ export default async function PollPage({
   const isElectorateIssuePoll = pollType === "electorate_issue";
   const isPartyVotePoll = pollType === "party_vote";
   const isHouseholdFinancePoll = pollType === "household_finance";
+  const isElectoratePartyVotePoll = pollType === "electorate_party_vote";
+  const electorateName =
+    typeof pollRecord.electorate_name === "string" && pollRecord.electorate_name.trim()
+      ? pollRecord.electorate_name.trim()
+      : poll.title.replace(/ party vote.*$/i, "").trim();
 
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-neutral-950">
@@ -154,6 +160,8 @@ export default async function PollPage({
               <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
                 {isElectorateIssuePoll
                   ? "2026 New Zealand electorate pulse"
+                  : isElectoratePartyVotePoll
+                    ? `2026 ${electorateName} party vote pulse`
                   : isHouseholdFinancePoll
                     ? "2026 New Zealand household finance pulse"
                     : "2026 New Zealand General Election"}
@@ -261,6 +269,30 @@ export default async function PollPage({
             options={options}
             electorates={electorates}
           />
+        )}
+
+        {votingOpen && isElectoratePartyVotePoll && (
+          <>
+            <section className="mt-8">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
+                {electorateName} electorate
+              </p>
+              <h2 className="mt-3 max-w-4xl text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+                {poll.question}
+              </h2>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-neutral-600 sm:text-base">
+                This asks about your party vote, not your electorate candidate vote.
+              </p>
+            </section>
+
+            <ElectoratePartyVoteForm
+              pollId={poll.id}
+              pollSlug={poll.slug}
+              electorateName={electorateName}
+              votingOpen={votingOpen}
+              options={options}
+            />
+          </>
         )}
 
         {votingOpen && isPartyVotePoll && (

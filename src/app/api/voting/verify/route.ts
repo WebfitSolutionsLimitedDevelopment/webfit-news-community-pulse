@@ -229,7 +229,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (poll.poll_type === "party_vote") {
+    if (poll.poll_type === "party_vote" || poll.poll_type === "electorate_party_vote") {
       if (
         !VALID_ELIGIBILITY_STATUSES.includes(
           eligibilityStatus as (typeof VALID_ELIGIBILITY_STATUSES)[number]
@@ -329,6 +329,42 @@ export async function POST(request: Request) {
         },
         { status: 409 }
       );
+    }
+
+    if (poll.poll_type === "electorate_party_vote") {
+      const { data: electoratePartyPolls, error: electoratePollsError } =
+        await admin
+          .from("polls")
+          .select("id")
+          .eq("poll_type", "electorate_party_vote");
+
+      if (electoratePollsError) throw new Error(electoratePollsError.message);
+
+      const electoratePartyPollIds = (electoratePartyPolls ?? []).map(
+        (item) => item.id
+      );
+
+      if (electoratePartyPollIds.length > 0) {
+        const { data: electorateVote, error: electorateVoteError } = await admin
+          .from("votes")
+          .select("id, poll_id")
+          .eq("email_hash", emailHash)
+          .in("poll_id", electoratePartyPollIds)
+          .limit(1)
+          .maybeSingle();
+
+        if (electorateVoteError) throw new Error(electorateVoteError.message);
+
+        if (electorateVote) {
+          return NextResponse.json(
+            {
+              error:
+                "This email has already participated in an electorate party vote poll. Only one electorate response is permitted.",
+            },
+            { status: 409 }
+          );
+        }
+      }
     }
 
     const { data: verification, error: verificationError } = await admin
@@ -496,11 +532,14 @@ export async function POST(request: Request) {
       risk_flags: riskFlags,
     };
 
-    if (poll.poll_type === "party_vote") {
+    if (poll.poll_type === "party_vote" || poll.poll_type === "electorate_party_vote") {
       votePayload.eligibility_status = eligibilityStatus;
       votePayload.participant_region = region;
       votePayload.participant_age_range = ageRange;
       votePayload.main_election_issue = mainIssue;
+      if (poll.poll_type === "electorate_party_vote") {
+        votePayload.electorate_name = electorateName || null;
+      }
     }
 
     if (poll.poll_type === "electorate_issue") {
@@ -560,15 +599,15 @@ export async function POST(request: Request) {
         option_label: option.label,
         vote_status: vote.status,
         eligibility_status:
-          poll.poll_type === "party_vote" ? eligibilityStatus : null,
+          (poll.poll_type === "party_vote" || poll.poll_type === "electorate_party_vote") ? eligibilityStatus : null,
         participant_region:
-          poll.poll_type === "party_vote" ? region : null,
+          (poll.poll_type === "party_vote" || poll.poll_type === "electorate_party_vote") ? region : null,
         participant_age_range:
-          poll.poll_type === "party_vote" ? ageRange : null,
+          (poll.poll_type === "party_vote" || poll.poll_type === "electorate_party_vote") ? ageRange : null,
         main_election_issue:
-          poll.poll_type === "party_vote" ? mainIssue : null,
+          (poll.poll_type === "party_vote" || poll.poll_type === "electorate_party_vote") ? mainIssue : null,
         electorate_name:
-          poll.poll_type === "electorate_issue" ? electorateName : null,
+          (poll.poll_type === "electorate_issue" || poll.poll_type === "electorate_party_vote") ? electorateName : null,
         issue_priority:
           poll.poll_type === "electorate_issue" ? option.label : null,
         issue_severity:
