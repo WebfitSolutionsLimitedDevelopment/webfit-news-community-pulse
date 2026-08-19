@@ -90,3 +90,14 @@ https://poll.webfitnews.co.nz
 
 Powered by Webfit Solutions Limited:
 https://webfitt.co.nz
+
+## Luxon Leadership Pulse, no OTP
+
+This package includes a low-friction `leadership_pulse` poll mode for the August 2026 Christopher Luxon reader pulse.
+
+After deployment, run `LUXON_LEADERSHIP_PULSE_SETUP.sql` in Supabase SQL Editor.
+
+Public URL after setup:
+`https://poll.webfitnews.co.nz/polls/luxon-leadership-pulse-2026`
+
+This mode collects no email address and sends no OTP. It uses a pseudonymous browser cookie plus hashed technical signals for basic repeat-vote and rate-limit controls. It is intentionally labelled as an open reader pulse, not a scientific or representative election poll.
