@@ -263,6 +263,12 @@ export default async function ElectionPulsePage() {
                   Vote now
                   <ArrowRight size={18} />
                 </Link>
+                <Link
+                  href="/coalition-2026"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-black/15 bg-white px-6 py-3 text-base font-semibold text-neutral-800 transition hover:border-[#b88a2a]"
+                >
+                  Who forms the government?
+                </Link>
                 <DashboardRefreshButton />
                 <p className="text-sm text-neutral-500">
                   Last updated {lastUpdated} NZ time
