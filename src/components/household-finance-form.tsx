@@ -6,9 +6,6 @@ import {
   ChevronRight,
   CircleDollarSign,
   Loader2,
-  LockKeyhole,
-  Mail,
-  ShieldCheck,
   TrendingDown,
   TrendingUp,
   WalletCards,
@@ -24,14 +21,12 @@ type PollOption = {
 type ResultRow = {
   option_id: string;
   option_label: string;
-  vote_count: number;
   percentage: number;
 };
 
 type PressureResultRow = {
   value: string;
   label: string;
-  vote_count: number;
   percentage: number;
 };
 
@@ -94,19 +89,13 @@ export function HouseholdFinanceForm({
   const [selectedOptionId, setSelectedOptionId] = useState("");
   const [financialPressure, setFinancialPressure] = useState("");
   const [participantComment, setParticipantComment] = useState("");
-  const [email, setEmail] = useState("");
-  const [verificationId, setVerificationId] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"vote" | "verify" | "results">("vote");
+  const [step, setStep] = useState<"vote" | "results">("vote");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [results, setResults] = useState<ResultRow[]>([]);
   const [pressureResults, setPressureResults] = useState<PressureResultRow[]>(
     []
   );
-  const [totalVerifiedResponses, setTotalVerifiedResponses] = useState(0);
-  const [pressureResponseCount, setPressureResponseCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState("");
 
   const selectedOption = useMemo(
@@ -114,32 +103,25 @@ export function HouseholdFinanceForm({
     [options, selectedOptionId]
   );
 
-  async function requestVerification(event: FormEvent<HTMLFormElement>) {
+  async function submitVote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    setMessage("");
 
     if (!selectedOptionId) {
       setError("Please select the option that best reflects your household.");
       return;
     }
 
-    if (!email.trim()) {
-      setError("Please enter your email address.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const response = await fetch("/api/voting/request-verification", {
+      const response = await fetch("/api/voting/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pollId,
           pollSlug,
           optionId: selectedOptionId,
-          email: email.trim(),
           financialPressure: financialPressure || null,
           participantComment: participantComment.trim() || null,
         }),
@@ -148,86 +130,18 @@ export function HouseholdFinanceForm({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Unable to send the verification code.");
-      }
-
-      setVerificationId(data.verificationId);
-      setStep("verify");
-      setMessage("A six-digit verification code has been sent to your email.");
-      setOtp("");
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to send the verification code."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function verifyResponse(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setMessage("");
-
-    if (!/^\d{6}$/.test(otp)) {
-      setError("Enter the six-digit code sent to your email.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/voting/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pollId,
-          pollSlug,
-          optionId: selectedOptionId,
-          verificationId,
-          email: email.trim(),
-          otp,
-          financialPressure: financialPressure || null,
-          participantComment: participantComment.trim() || null,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Unable to verify your response.");
+        throw new Error(data.error || "We couldn't record your vote. Please try again.");
       }
 
       setResults(data.nationalResults || data.results || []);
-      setPressureResults(
-        data.financialPressureResults || data.pressureResults || []
-      );
-      setTotalVerifiedResponses(
-        Number(
-          data.nationalResponseCount ??
-            data.totalVerifiedResponses ??
-            0
-        )
-      );
-      setPressureResponseCount(
-        Number(
-          data.financialPressureResponseCount ??
-            data.pressureResponseCount ??
-            0
-        )
-      );
+      setPressureResults(data.pressureResults || []);
       setLastUpdated(data.lastUpdated || new Date().toISOString());
-      setMessage(
-        data.message || "Your verified response has been recorded."
-      );
       setStep("results");
-    } catch (verificationError) {
+    } catch (submitError) {
       setError(
-        verificationError instanceof Error
-          ? verificationError.message
-          : "Unable to verify your response."
+        submitError instanceof Error
+          ? submitError.message
+          : "We couldn't record your vote. Please try again."
       );
     } finally {
       setLoading(false);
@@ -247,13 +161,13 @@ export function HouseholdFinanceForm({
               <CheckCircle2 className="mt-1 shrink-0" size={30} />
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-100">
-                  Response verified
+                  Vote recorded
                 </p>
                 <h2 className="mt-2 text-3xl font-semibold tracking-tight">
                   Thank you for participating
                 </h2>
                 <p className="mt-3 text-emerald-50">
-                  {message} Your response for{" "}
+                  Your vote for{" "}
                   <strong>{selectedOption?.label}</strong> is included below.
                 </p>
               </div>
@@ -272,12 +186,6 @@ export function HouseholdFinanceForm({
                   Current participant results
                 </h3>
               </div>
-              <div className="rounded-2xl bg-[#f6f1e7] px-4 py-3 text-right">
-                <p className="text-2xl font-semibold text-[#7b1025]">
-                  {totalVerifiedResponses}
-                </p>
-                <p className="text-xs text-neutral-500">verified responses</p>
-              </div>
             </div>
 
             <div className="mt-7 space-y-5">
@@ -286,7 +194,6 @@ export function HouseholdFinanceForm({
                   <div className="mb-2 flex items-center justify-between gap-4 text-sm">
                     <span className="font-semibold">{row.option_label}</span>
                     <span className="text-neutral-500">
-                      {row.vote_count} responses ·{" "}
                       {formatPercentage(row.percentage)}
                     </span>
                   </div>
@@ -316,24 +223,18 @@ export function HouseholdFinanceForm({
                   Biggest household pressures
                 </h3>
               </div>
-              <div className="rounded-2xl bg-[#f6f1e7] px-4 py-3 text-right">
-                <p className="text-2xl font-semibold text-[#7b1025]">
-                  {pressureResponseCount}
-                </p>
-                <p className="text-xs text-neutral-500">answers</p>
-              </div>
             </div>
 
-            {pressureResults.some((row) => row.vote_count > 0) ? (
+            {pressureResults.some((row) => row.percentage > 0) ? (
               <div className="mt-7 space-y-5">
                 {pressureResults
-                  .filter((row) => row.vote_count > 0)
+                  .filter((row) => row.percentage > 0)
                   .map((row) => (
                     <div key={row.value}>
                       <div className="mb-2 flex items-center justify-between gap-4 text-sm">
                         <span className="font-semibold">{row.label}</span>
                         <span className="text-neutral-500">
-                          {row.vote_count} · {formatPercentage(row.percentage)}
+                          {formatPercentage(row.percentage)}
                         </span>
                       </div>
                       <div className="h-3 overflow-hidden rounded-full bg-neutral-100">
@@ -359,9 +260,9 @@ export function HouseholdFinanceForm({
         </div>
 
         <div className="rounded-2xl border border-black/10 bg-[#f6f1e7] p-5 text-sm leading-6 text-neutral-600">
-          Results reflect verified participants in this Webfit News Community
-          Pulse poll. They are not a scientifically representative estimate of
-          all New Zealand households.
+          Results reflect readers who chose to take part in this Webfit News
+          Community Pulse poll. They are not a scientifically representative
+          estimate of all New Zealand households.
           {lastUpdated && (
             <span className="mt-2 block text-xs text-neutral-500">
               Last updated: {new Date(lastUpdated).toLocaleString("en-NZ")}
@@ -372,87 +273,6 @@ export function HouseholdFinanceForm({
     );
   }
 
-  if (step === "verify") {
-    return (
-      <section className="mt-8 rounded-[2rem] border border-black/10 bg-white p-6 shadow-2xl shadow-black/5 sm:p-9">
-        <div className="mx-auto max-w-2xl">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#7b1025] text-white">
-            <LockKeyhole size={26} />
-          </div>
-
-          <p className="mt-6 text-xs font-bold uppercase tracking-[0.22em] text-[#9d741f]">
-            Email verification
-          </p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">
-            Enter your six-digit code
-          </h2>
-          <p className="mt-3 leading-7 text-neutral-600">
-            We sent a code to <strong>{email}</strong>. It expires in 10
-            minutes.
-          </p>
-
-          {message && (
-            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-              {message}
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={verifyResponse} className="mt-7">
-            <label
-              htmlFor="household-otp"
-              className="text-sm font-semibold text-neutral-800"
-            >
-              Verification code
-            </label>
-            <input
-              id="household-otp"
-              value={otp}
-              onChange={(event) =>
-                setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
-              }
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="000000"
-              className="mt-2 w-full rounded-2xl border border-black/15 bg-white px-5 py-4 text-center text-3xl font-semibold tracking-[0.45em] outline-none transition focus:border-[#7b1025] focus:ring-4 focus:ring-[#7b1025]/10"
-            />
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#7b1025] px-6 py-4 font-semibold text-white transition hover:bg-[#650d1f] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <ShieldCheck size={20} />
-              )}
-              Verify and record response
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setStep("vote");
-                setVerificationId("");
-                setOtp("");
-                setError("");
-                setMessage("");
-              }}
-              className="mt-3 w-full rounded-2xl border border-black/10 px-6 py-3.5 font-semibold text-neutral-700 transition hover:bg-neutral-50"
-            >
-              Change response or request a new code
-            </button>
-          </form>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="mt-8">
@@ -467,8 +287,8 @@ export function HouseholdFinanceForm({
                 How has your household financial position changed?
               </h2>
               <p className="mt-4 max-w-2xl leading-7 text-white/80">
-                Select one response, optionally identify your biggest financial
-                pressure, then verify by email.
+                Select one response and press Submit. No email or sign-up
+                needed.
               </p>
             </div>
 
@@ -482,7 +302,7 @@ export function HouseholdFinanceForm({
           </div>
         </div>
 
-        <form onSubmit={requestVerification} className="p-6 sm:p-9">
+        <form onSubmit={submitVote} className="p-6 sm:p-9">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
               Step 1
@@ -586,61 +406,6 @@ export function HouseholdFinanceForm({
             </p>
           </div>
 
-          <div className="mt-9 border-t border-black/10 pt-9">
-            <div className="grid gap-6 lg:grid-cols-[1fr_.7fr]">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
-                  Step 3
-                </p>
-                <h3 className="mt-2 text-2xl font-semibold">
-                  Verify your response
-                </h3>
-
-                <label
-                  htmlFor="household-email"
-                  className="mt-5 block text-sm font-semibold text-neutral-800"
-                >
-                  Email address
-                </label>
-                <div className="relative mt-2">
-                  <Mail
-                    size={19}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400"
-                  />
-                  <input
-                    id="household-email"
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    className="w-full rounded-2xl border border-black/15 bg-white py-4 pl-12 pr-5 outline-none transition focus:border-[#7b1025] focus:ring-4 focus:ring-[#7b1025]/10"
-                  />
-                </div>
-                <p className="mt-2 text-xs leading-5 text-neutral-500">
-                  One verified response per email for this poll. The same email
-                  may participate in other Webfit News polls.
-                </p>
-              </div>
-
-              <div className="rounded-[1.5rem] bg-[#f6f1e7] p-5">
-                <div className="flex gap-3">
-                  <LockKeyhole
-                    size={21}
-                    className="mt-0.5 shrink-0 text-[#7b1025]"
-                  />
-                  <div>
-                    <p className="font-semibold">Your privacy</p>
-                    <p className="mt-2 text-sm leading-6 text-neutral-600">
-                      Your email is used only to send a one-time code and reduce
-                      duplicate responses. It is not published or added to a
-                      marketing list.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {error && (
             <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -658,7 +423,7 @@ export function HouseholdFinanceForm({
             ) : (
               <ChevronRight size={20} />
             )}
-            Continue to email verification
+            Submit my vote
           </button>
         </form>
       </div>

@@ -9,7 +9,6 @@ type PartyResult = {
   label: string;
   shortLabel: string | null;
   logoUrl: string | null;
-  voteCount: number;
   rawShare: number;
   equalElectorateShare: number;
   electorateLeads: number;
@@ -38,21 +37,17 @@ function getPartyDisplayName(party: PartyResult) {
   return party.shortLabel || SHORT_PARTY_NAMES[party.key] || party.label;
 }
 
-function responseLabel(count: number) {
-  return `${count.toLocaleString("en-NZ")} ${count === 1 ? "response" : "responses"}`;
-}
-
 function getCompetitionRank(party: PartyResult, parties: PartyResult[]) {
   return (
     1 +
-    parties.filter((item) => item.voteCount > party.voteCount).length
+    parties.filter((item) => item.rawShare > party.rawShare).length
   );
 }
 
 export function PartyResultsList({ parties }: { parties: PartyResult[] }) {
   const [showAll, setShowAll] = useState(false);
-  const partiesWithVotes = parties.filter((party) => party.voteCount > 0);
-  const zeroVoteParties = parties.filter((party) => party.voteCount === 0);
+  const partiesWithVotes = parties.filter((party) => party.rawShare > 0);
+  const zeroVoteParties = parties.filter((party) => party.rawShare === 0);
   const visibleParties = showAll ? parties : partiesWithVotes;
 
   return (
@@ -77,7 +72,7 @@ export function PartyResultsList({ parties }: { parties: PartyResult[] }) {
           {showAll ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
           {showAll
             ? "Show fewer parties"
-            : `Show all parties (${zeroVoteParties.length} with no responses)`}
+            : `Show all parties (${zeroVoteParties.length} with no votes yet)`}
         </button>
       )}
     </div>
@@ -110,7 +105,7 @@ function PartyResultCard({
                 {getPartyDisplayName(party)}
               </h3>
               <p className="mt-1 text-[11px] leading-5 text-neutral-500">
-                {responseLabel(party.voteCount)} · leading {party.electorateLeads}{" "}
+                Leading {party.electorateLeads}{" "}
                 electorate poll{party.electorateLeads === 1 ? "" : "s"}
               </p>
             </div>

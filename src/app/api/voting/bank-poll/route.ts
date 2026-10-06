@@ -1,6 +1,7 @@
 import { createHmac, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { toPublicResults } from "@/lib/voting";
 
 const BANK_POLL_SLUG = "new-zealand-favourite-bank-2026";
 const COOKIE_NAME = "webfit_bank_poll_voter_2026";
@@ -53,7 +54,7 @@ async function loadResults(admin: ReturnType<typeof createAdminClient>, pollId: 
   });
 
   if (error) throw new Error(error.message);
-  return safeResults(data);
+  return toPublicResults(safeResults(data));
 }
 
 export async function GET(request: NextRequest) {

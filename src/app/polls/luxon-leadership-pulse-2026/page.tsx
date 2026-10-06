@@ -39,14 +39,6 @@ export default async function LuxonLeadershipPulsePage() {
 
   const options = (optionsData ?? []) as PollOption[];
 
-  const { data: responseSummary } = await supabase.rpc("get_public_poll_results", {
-    requested_poll_id: poll.id,
-  });
-
-  const responseCount = Array.isArray(responseSummary)
-    ? responseSummary.reduce((total, item) => total + Number(item.vote_count ?? 0), 0)
-    : 0;
-
   const votingOpen = poll.status === "open";
 
   return (
@@ -87,21 +79,10 @@ export default async function LuxonLeadershipPulsePage() {
 
             <aside className="rounded-[1.5rem] border border-[#b88a2a]/30 bg-[#fbf8f1] p-5 sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9d741f]">
-                Live participation
+                Quick and anonymous
               </p>
 
-              <div className="mt-4 flex items-end gap-3">
-                <p className="text-5xl font-semibold tracking-[-0.05em]">
-                  {responseCount.toLocaleString("en-NZ")}
-                </p>
-                <p className="pb-1 text-sm leading-5 text-neutral-500">
-                  reader
-                  <br />
-                  responses
-                </p>
-              </div>
-
-              <div className="mt-6 space-y-3 border-t border-black/10 pt-5 text-sm leading-6 text-neutral-600">
+              <div className="mt-4 space-y-3 text-sm leading-6 text-neutral-600">
                 <TrustLine text="No email or OTP required" />
                 <TrustLine text="Lightweight browser controls reduce repeat voting" />
                 <TrustLine text="Open reader pulse, not a scientific survey" />
