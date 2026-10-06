@@ -231,7 +231,8 @@ export default async function CoalitionPage() {
         gov === opp
           ? "The blocs are tied. Smaller parties decide who governs."
           : `${govAhead ? "The current government" : "The opposition"} is ahead on ${fmt(Math.max(gov, opp))}, but needs support from outside its bloc.`,
-      colour: BLOC_META.other.colour,
+      // Darker than BLOC_META.other.colour so white hero text stays above 4.5:1.
+      colour: "#6b5417",
     };
   }
 
@@ -258,7 +259,14 @@ export default async function CoalitionPage() {
 
         {error ? (
           <section className="mt-8 rounded-[2rem] border border-red-200 bg-red-50 p-7 text-red-950">
-            The coalition picture could not be loaded right now. Please try again shortly.
+            <p>The coalition picture could not be loaded right now. Please try again shortly.</p>
+            {/* Voting can still work when the results RPC fails, so keep the CTA. */}
+            <Link
+              href="/electorates-2026"
+              className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-[#7b1025] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-[#5c0b1b]"
+            >
+              Vote now <ArrowRight size={18} />
+            </Link>
           </section>
         ) : (
           <>
@@ -266,7 +274,7 @@ export default async function CoalitionPage() {
             <section className="mt-8 overflow-hidden rounded-[2rem] bg-white shadow-[0_30px_90px_rgba(38,31,20,0.10)]">
               <div className="grid lg:grid-cols-[1fr_1.1fr]">
                 <div className="flex flex-col justify-center p-7 text-white sm:p-10" style={{ background: verdict.colour }}>
-                  <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-white/75">
+                  <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-white/90">
                     <Scale size={15} /> {verdict.eyebrow}
                   </p>
                   <h2 className="mt-3 text-4xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">
@@ -283,7 +291,7 @@ export default async function CoalitionPage() {
                     >
                       Vote now <ArrowRight size={18} />
                     </Link>
-                    <span className="text-xs text-white/70">Updated {lastUpdated}</span>
+                    <span className="text-xs text-white/85">Updated {lastUpdated}</span>
                   </div>
                 </div>
 
