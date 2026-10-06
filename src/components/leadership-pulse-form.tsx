@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { BarChart3, CheckCircle2, Loader2, Vote } from "lucide-react";
+import { ResultsLockedNotice } from "@/components/results-locked-notice";
 
 type PollOption = {
   id: string;
@@ -117,6 +118,7 @@ export function LeadershipPulseForm({
             </div>
 
             <div className="mt-6 space-y-5">
+              {results.length === 0 && <ResultsLockedNotice />}
               {results.map((result) => (
                 <div key={result.option_id}>
                   <div className="flex items-end justify-between gap-4 text-sm">

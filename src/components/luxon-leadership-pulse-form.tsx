@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { BarChart3, CheckCircle2, LoaderCircle, Vote } from "lucide-react";
+import { ResultsLockedNotice } from "@/components/results-locked-notice";
 
 type PollOption = {
   id: string;
@@ -117,6 +118,7 @@ export function LuxonLeadershipPulseForm({ pollId, votingOpen, options }: Props)
           </p>
 
           <div className="mt-6 space-y-5">
+            {results.length === 0 && <ResultsLockedNotice />}
             {results.map((result) => {
               const percentage = Number(result.percentage || 0);
               return (

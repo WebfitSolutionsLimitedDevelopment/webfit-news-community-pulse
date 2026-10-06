@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { toPublicResults } from "@/lib/voting";
+import { gatePublicResults } from "@/lib/voting";
 
 const BANK_POLL_SLUG = "new-zealand-favourite-bank-2026";
 const COOKIE_NAME = "webfit_bank_poll_voter_2026";
@@ -14,26 +14,10 @@ type PublicResultRow = {
   percentage: number;
 };
 
-type SafeResultRow = {
-  option_id: string;
-  option_label: string;
-  percentage: number;
-};
-
 function hashValue(value: string) {
   const secret = process.env.OTP_HASH_SECRET;
   if (!secret) throw new Error("OTP_HASH_SECRET is missing.");
   return createHmac("sha256", secret).update(value).digest("hex");
-}
-
-function safeResults(rows: unknown): SafeResultRow[] {
-  if (!Array.isArray(rows)) return [];
-
-  return (rows as PublicResultRow[]).map((row) => ({
-    option_id: String(row.option_id),
-    option_label: String(row.option_label),
-    percentage: Number(row.percentage || 0),
-  }));
 }
 
 async function loadPoll() {
@@ -54,7 +38,9 @@ async function loadResults(admin: ReturnType<typeof createAdminClient>, pollId: 
   });
 
   if (error) throw new Error(error.message);
-  return toPublicResults(safeResults(data));
+  const rows = Array.isArray(data) ? (data as PublicResultRow[]) : [];
+  // Locked (empty) until the poll has enough votes to hide the total.
+  return gatePublicResults(rows).results;
 }
 
 export async function GET(request: NextRequest) {

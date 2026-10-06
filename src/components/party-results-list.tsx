@@ -49,6 +49,8 @@ export function PartyResultsList({ parties }: { parties: PartyResult[] }) {
   const partiesWithVotes = parties.filter((party) => party.rawShare > 0);
   const zeroVoteParties = parties.filter((party) => party.rawShare === 0);
   const visibleParties = showAll ? parties : partiesWithVotes;
+  // The equal-electorate view only exists once at least one electorate has unlocked results.
+  const hasEqualAverage = parties.some((party) => party.equalElectorateShare > 0);
 
   return (
     <div className="mt-5">
@@ -58,6 +60,7 @@ export function PartyResultsList({ parties }: { parties: PartyResult[] }) {
             key={party.key}
             party={party}
             rank={getCompetitionRank(party, parties)}
+            showEqualAverage={hasEqualAverage}
           />
         ))}
       </div>
@@ -82,9 +85,11 @@ export function PartyResultsList({ parties }: { parties: PartyResult[] }) {
 function PartyResultCard({
   party,
   rank,
+  showEqualAverage,
 }: {
   party: PartyResult;
   rank: number;
+  showEqualAverage: boolean;
 }) {
   return (
     <article className="rounded-[1.25rem] border border-black/10 p-3.5 sm:p-4">
@@ -119,12 +124,14 @@ function PartyResultCard({
               style={{ width: `${Math.min(100, party.rawShare)}%` }}
             />
           </div>
+          {showEqualAverage && (
           <p className="mt-2 text-[11px] text-neutral-500">
             Equal-electorate average:{" "}
             <strong className="text-neutral-700">
               {party.equalElectorateShare.toFixed(1)}%
             </strong>
           </p>
+          )}
         </div>
       </div>
     </article>
