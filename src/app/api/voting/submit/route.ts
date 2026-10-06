@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
 
     const { data: poll, error: pollError } = await admin
       .from("polls")
-      .select("id, status, is_public, poll_type")
+      .select("id, status, is_public, poll_type, results_visibility")
       .eq("id", pollId)
       .maybeSingle();
     if (pollError) throw new Error(pollError.message);
@@ -340,15 +340,20 @@ export async function POST(request: NextRequest) {
       ip_hash: ipHash,
     });
 
-    // Results: percentages only, never raw counts.
-    const { data: resultsData, error: resultsError } = await admin.rpc("get_public_poll_results", {
-      requested_poll_id: pollId,
-    });
-    if (resultsError) console.error("Post-vote results load failed:", resultsError);
-    const results = toPublicResults(Array.isArray(resultsData) ? resultsData : []);
+    // Results: percentages only, never raw counts, and none at all while an
+    // editor has set this poll's results to private.
+    const resultsHidden = poll.results_visibility === "private";
+    let results: ReturnType<typeof toPublicResults> = [];
+    if (!resultsHidden) {
+      const { data: resultsData, error: resultsError } = await admin.rpc("get_public_poll_results", {
+        requested_poll_id: pollId,
+      });
+      if (resultsError) console.error("Post-vote results load failed:", resultsError);
+      results = toPublicResults(Array.isArray(resultsData) ? resultsData : []);
+    }
 
     let electorateResults: ReturnType<typeof toPublicResults> = [];
-    if (poll.poll_type === "electorate_issue") {
+    if (poll.poll_type === "electorate_issue" && !resultsHidden) {
       const [{ data: allOptions }, { data: electorateVotes }] = await Promise.all([
         admin.from("poll_options").select("id, label").eq("poll_id", pollId).eq("is_active", true).order("display_order"),
         admin.from("votes").select("option_id").eq("poll_id", pollId).eq("electorate_name", electorateName).eq("status", "valid"),
@@ -360,7 +365,7 @@ export async function POST(request: NextRequest) {
     }
 
     let pressureResults: Array<{ value: string; label: string; percentage: number }> = [];
-    if (poll.poll_type === "household_finance") {
+    if (poll.poll_type === "household_finance" && !resultsHidden) {
       const { data: pressureVotes } = await admin
         .from("votes")
         .select("financial_pressure")
@@ -378,6 +383,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       results,
+      resultsHidden,
       nationalResults: results,
       electorateResults,
       pressureResults,

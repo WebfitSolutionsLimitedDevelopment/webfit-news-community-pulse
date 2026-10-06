@@ -147,6 +147,7 @@ export function ReaderPoll({ pollId, question, votingOpen, options }: ReaderPoll
 
       setHasVoted(true);
       setResults(sortResults(data.results));
+      setResultsHidden(Boolean(data.resultsHidden));
     } catch {
       setMessage("Something went wrong while submitting your vote. Please try again.");
     } finally {
