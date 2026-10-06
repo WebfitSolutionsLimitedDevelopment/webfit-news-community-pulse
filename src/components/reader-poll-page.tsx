@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { Building2, CheckCircle2, LockKeyhole, ShieldCheck } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { SiteFooter } from "@/components/site-footer";
-import { ReaderPoll } from "@/components/reader-poll";
+import { ReaderPoll, type PollResult } from "@/components/reader-poll";
 import { getMoneyPoll } from "@/lib/money-polls";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { toPublicResults } from "@/lib/voting";
 
 type PollOption = {
   id: string;
@@ -48,6 +50,24 @@ export async function ReaderPollPage({ slug }: { slug: string }) {
   const options = (optionData ?? []) as PollOption[];
   const votingOpen = poll.status === "open";
   const resultsPublic = poll.results_visibility !== "private";
+
+  // Live results for everyone, before and after voting: percentages only.
+  // Loaded server-side with the admin client (the results RPC is not callable
+  // with the public key), and skipped entirely when results are private.
+  let initialResults: PollResult[] = [];
+  let initialResultsError = false;
+  if (resultsPublic) {
+    const { data: resultsData, error: resultsError } = await createAdminClient().rpc(
+      "get_public_poll_results",
+      { requested_poll_id: poll.id },
+    );
+    if (resultsError) {
+      console.error(`Unable to load results for poll ${slug}:`, resultsError);
+      initialResultsError = true;
+    } else {
+      initialResults = toPublicResults(Array.isArray(resultsData) ? resultsData : []);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-neutral-950">
@@ -100,7 +120,7 @@ export async function ReaderPollPage({ slug }: { slug: string }) {
                     icon={<CheckCircle2 size={18} />}
                     text={
                       resultsPublic
-                        ? "Results are shown as percentages after this browser has voted."
+                        ? "Live results are shown as percentages."
                         : "Results for this poll are not public at the moment."
                     }
                   />
@@ -115,6 +135,8 @@ export async function ReaderPollPage({ slug }: { slug: string }) {
           question={poll.question || config.question}
           votingOpen={votingOpen}
           resultsPublic={resultsPublic}
+          initialResults={initialResults}
+          initialResultsError={initialResultsError}
           options={options}
         />
 
