@@ -12,7 +12,7 @@ import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
 import { PartyLogo } from "@/components/party-logo";
 import { PartyResultsList } from "@/components/party-results-list";
 import { SiteFooter } from "@/components/site-footer";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { MIN_NATIONAL_VOTES, MIN_POLL_VOTES } from "@/lib/voting-thresholds";
 
 export const dynamic = "force-dynamic";
@@ -92,8 +92,10 @@ function normalisePartyKey(option: SummaryOption) {
 }
 
 export default async function ElectionPulsePage() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc(
+  // Service-role client: the summary includes raw vote counts, so the RPC is
+  // not executable with the public key.
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc(
     "get_electorate_party_vote_summary",
   );
 
