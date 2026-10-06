@@ -84,6 +84,59 @@ function percentagesFrom<T extends string>(keys: Array<{ key: string; label: T }
     .map(({ key, label, percentage }) => ({ key, label, percentage }));
 }
 
+/**
+ * Has this browser already voted in this poll? If so, return its choice and
+ * the current results (percentages only), so a returning voter sees results
+ * instead of the form. Browsers that have not voted get no results.
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const pollId = request.nextUrl.searchParams.get("pollId")?.trim() || "";
+    if (!pollId) {
+      return NextResponse.json({ error: "pollId is required." }, { status: 400 });
+    }
+
+    const voterToken = request.cookies.get(VOTER_COOKIE_NAME)?.value || "";
+    if (!voterToken) return NextResponse.json({ voted: false });
+
+    const admin = createAdminClient();
+
+    const { data: poll, error: pollError } = await admin
+      .from("polls")
+      .select("id, is_public")
+      .eq("id", pollId)
+      .maybeSingle();
+    if (pollError) throw new Error(pollError.message);
+    if (!poll || !poll.is_public) {
+      return NextResponse.json({ error: "Poll not found." }, { status: 404 });
+    }
+
+    const { data: existingVote, error: existingVoteError } = await admin
+      .from("votes")
+      .select("option_id")
+      .eq("poll_id", pollId)
+      .eq("email_hash", hashValue(`anonymous-voter:${voterToken}`))
+      .limit(1)
+      .maybeSingle();
+    if (existingVoteError) throw new Error(existingVoteError.message);
+    if (!existingVote) return NextResponse.json({ voted: false });
+
+    const { data: resultsData, error: resultsError } = await admin.rpc("get_public_poll_results", {
+      requested_poll_id: pollId,
+    });
+    if (resultsError) throw new Error(resultsError.message);
+
+    return NextResponse.json({
+      voted: true,
+      selectedOptionId: existingVote.option_id,
+      results: toPublicResults(Array.isArray(resultsData) ? resultsData : []),
+    });
+  } catch (error) {
+    console.error("Vote status check failed:", error);
+    return NextResponse.json({ error: "Unable to check voting status right now." }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

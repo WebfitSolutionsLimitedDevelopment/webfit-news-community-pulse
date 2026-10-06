@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BrandHeader } from "@/components/brand-header";
 import { SiteFooter } from "@/components/site-footer";
 import { StatusPill } from "@/components/status-pill";
+import { MONEY_POLLS, MONEY_POLL_SLUGS } from "@/lib/money-polls";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,12 @@ export default async function HomePage() {
     .eq("is_public", true)
     .order("created_at", { ascending: false });
 
-  const featuredPolls = (polls ?? []).filter((poll) => poll.poll_type !== "electorate_party_vote");
+  const featuredPolls = (polls ?? []).filter(
+    (poll) => poll.poll_type !== "electorate_party_vote" && !MONEY_POLL_SLUGS.has(poll.slug),
+  );
+  // Only link money polls that exist and are public, so a link never 404s.
+  const publicSlugs = new Set((polls ?? []).map((poll) => poll.slug));
+  const moneyPolls = MONEY_POLLS.filter((poll) => publicSlugs.has(poll.slug));
 
   return (
     <div className="min-h-screen">
@@ -148,6 +154,38 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
+        {moneyPolls.length > 0 && (
+          <section className="mx-auto max-w-7xl px-5 pt-16 md:px-8">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#b88a2a]">
+              Money and banking
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+              Reader polls on banking
+            </h2>
+
+            <div className="mt-9 grid gap-5 md:grid-cols-3">
+              {moneyPolls.map((poll) => (
+                <Link
+                  key={poll.slug}
+                  href={`/polls/${poll.slug}`}
+                  className="luxury-border group flex flex-col rounded-[2rem] bg-white p-7 transition hover:-translate-y-1 hover:shadow-2xl"
+                >
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
+                    {poll.eyebrow}
+                  </p>
+                  <h3 className="mt-3 flex-1 text-xl font-semibold leading-7 tracking-tight">
+                    {poll.question}
+                  </h3>
+                  <span className="mt-6 inline-flex items-center gap-2 font-semibold text-[#7b1025]">
+                    Vote now
+                    <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="mx-auto max-w-7xl px-5 py-16 md:px-8">
           <div className="mb-9 flex items-end justify-between gap-6">
