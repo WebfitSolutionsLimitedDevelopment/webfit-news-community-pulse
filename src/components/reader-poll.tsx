@@ -46,7 +46,12 @@ function sortResults(rows: unknown): PollResult[] {
   );
 }
 
-type VoteStatus = { selectedOptionId: string; results: PollResult[]; resultsHidden: boolean };
+type VoteStatus = {
+  selectedOptionId: string;
+  results: PollResult[];
+  resultsHidden: boolean;
+  resultsError?: boolean;
+};
 
 /** This browser's existing vote and the results, or null if it has not voted. */
 async function fetchVoteStatus(pollId: string): Promise<VoteStatus | null> {
@@ -92,8 +97,16 @@ export function ReaderPoll({
     setHasVoted(true);
     setSelectedOptionId(status.selectedOptionId);
     setResultsHidden(status.resultsHidden);
-    setResults(status.resultsHidden ? [] : status.results);
-    if (!status.resultsHidden) setResultsError(false);
+    if (status.resultsHidden) {
+      setResults([]);
+    } else if (status.resultsError) {
+      // Vote saved but results failed to load: keep what was shown and say so,
+      // rather than showing an empty "no votes yet" state.
+      setResultsError(true);
+    } else {
+      setResults(status.results);
+      setResultsError(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -167,6 +180,7 @@ export function ReaderPoll({
         selectedOptionId,
         results: sortResults(data.results),
         resultsHidden: Boolean(data.resultsHidden),
+        resultsError: Boolean(data.resultsError),
       });
     } catch {
       setMessage("Something went wrong while submitting your vote. Please try again.");

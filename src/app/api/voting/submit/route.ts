@@ -344,11 +344,16 @@ export async function POST(request: NextRequest) {
     // editor has set this poll's results to private.
     const resultsHidden = poll.results_visibility === "private";
     let results: ReturnType<typeof toPublicResults> = [];
+    // The vote is already saved; a results failure is reported, not thrown.
+    let resultsFailed = false;
     if (!resultsHidden) {
       const { data: resultsData, error: resultsError } = await admin.rpc("get_public_poll_results", {
         requested_poll_id: pollId,
       });
-      if (resultsError) console.error("Post-vote results load failed:", resultsError);
+      if (resultsError) {
+        console.error("Post-vote results load failed:", resultsError);
+        resultsFailed = true;
+      }
       results = toPublicResults(Array.isArray(resultsData) ? resultsData : []);
     }
 
@@ -384,6 +389,7 @@ export async function POST(request: NextRequest) {
       success: true,
       results,
       resultsHidden,
+      resultsError: resultsFailed,
       nationalResults: results,
       electorateResults,
       pressureResults,
