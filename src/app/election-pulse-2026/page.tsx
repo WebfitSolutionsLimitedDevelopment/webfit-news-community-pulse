@@ -246,7 +246,7 @@ export default async function ElectionPulsePage() {
               <div className="mt-7 flex flex-wrap gap-3 text-sm font-medium text-neutral-600">
                 <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2">
                   <ShieldCheck size={16} className="text-[#7b1025]" />
-                  One electorate vote per person
+                  One electorate vote per browser
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2">
                   <BarChart3 size={16} className="text-[#7b1025]" />

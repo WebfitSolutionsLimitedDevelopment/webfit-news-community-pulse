@@ -130,7 +130,7 @@ export function ElectoratePartyVoteForm({
               </h2>
               <p className="mt-3 leading-7 text-emerald-950/75">
                 {alreadyVoted
-                  ? "Only one vote per person is counted in this poll."
+                  ? "Only one vote per browser is counted in this poll."
                   : <>You voted for <strong>{selectedOptionLabel}</strong>{electorateName ? ` in ${electorateName}` : ""}.</>}
               </p>
             </div>
