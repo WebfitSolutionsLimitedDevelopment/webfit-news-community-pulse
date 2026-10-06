@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { BarChart3, CheckCircle2, LoaderCircle, Vote } from "lucide-react";
 
 type PollOption = {
@@ -10,7 +10,7 @@ type PollOption = {
   description: string | null;
 };
 
-type PollResult = {
+export type PollResult = {
   option_id: string;
   option_label: string;
   percentage: number;
@@ -21,6 +21,10 @@ type ReaderPollProps = {
   question: string;
   votingOpen: boolean;
   resultsPublic: boolean;
+  /** Live results loaded on the server (percentages only); empty when private. */
+  initialResults: PollResult[];
+  /** True when the server could not load the results. */
+  initialResultsError: boolean;
   options: PollOption[];
 };
 
@@ -42,7 +46,12 @@ function sortResults(rows: unknown): PollResult[] {
   );
 }
 
-type VoteStatus = { selectedOptionId: string; results: PollResult[]; resultsHidden: boolean };
+type VoteStatus = {
+  selectedOptionId: string;
+  results: PollResult[];
+  resultsHidden: boolean;
+  resultsError?: boolean;
+};
 
 /** This browser's existing vote and the results, or null if it has not voted. */
 async function fetchVoteStatus(pollId: string): Promise<VoteStatus | null> {
@@ -62,22 +71,43 @@ async function fetchVoteStatus(pollId: string): Promise<VoteStatus | null> {
 /**
  * Single-question reader poll using the shared open-voting route
  * (/api/voting/submit): one vote per browser per poll, percentages only.
+ * Live results are shown to everyone, before and after voting, unless an
+ * editor has made the poll's results private.
  */
-export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, options }: ReaderPollProps) {
+export function ReaderPoll({
+  pollId,
+  question,
+  votingOpen,
+  resultsPublic,
+  initialResults,
+  initialResultsError,
+  options,
+}: ReaderPollProps) {
   const [selectedOptionId, setSelectedOptionId] = useState("");
-  const [results, setResults] = useState<PollResult[]>([]);
+  const [results, setResults] = useState<PollResult[]>(() => sortResults(initialResults));
+  const [resultsError, setResultsError] = useState(initialResultsError);
   const [hasVoted, setHasVoted] = useState(false);
-  const [resultsHidden, setResultsHidden] = useState(false);
+  const [resultsHidden, setResultsHidden] = useState(!resultsPublic);
   const [checkingVote, setCheckingVote] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
-  function showResults(status: VoteStatus) {
+  // Stable (state setters only), so the mount effect can call it.
+  const showVote = useCallback((status: VoteStatus) => {
     setHasVoted(true);
     setSelectedOptionId(status.selectedOptionId);
-    setResults(status.results);
     setResultsHidden(status.resultsHidden);
-  }
+    if (status.resultsHidden) {
+      setResults([]);
+    } else if (status.resultsError) {
+      // Vote saved but results failed to load: keep what was shown and say so,
+      // rather than showing an empty "no votes yet" state.
+      setResultsError(true);
+    } else {
+      setResults(status.results);
+      setResultsError(false);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -85,7 +115,7 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
     async function checkExistingVote() {
       try {
         const status = await fetchVoteStatus(pollId);
-        if (active && status) showResults(status);
+        if (active && status) showVote(status);
       } catch {
         // A failed status check should not prevent a visitor from voting.
       } finally {
@@ -98,7 +128,7 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
     return () => {
       active = false;
     };
-  }, [pollId]);
+  }, [pollId, showVote]);
 
   const selectedLabel = useMemo(
     () => options.find((option) => option.id === selectedOptionId)?.label || "",
@@ -138,7 +168,7 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
         if (response.status === 409 && data.alreadyVoted) {
           const status = await fetchVoteStatus(pollId);
           if (status) {
-            showResults(status);
+            showVote(status);
             return;
           }
         }
@@ -146,9 +176,12 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
         return;
       }
 
-      setHasVoted(true);
-      setResults(sortResults(data.results));
-      setResultsHidden(Boolean(data.resultsHidden));
+      showVote({
+        selectedOptionId,
+        results: sortResults(data.results),
+        resultsHidden: Boolean(data.resultsHidden),
+        resultsError: Boolean(data.resultsError),
+      });
     } catch {
       setMessage("Something went wrong while submitting your vote. Please try again.");
     } finally {
@@ -156,21 +189,17 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
     }
   }
 
-  if (checkingVote) {
-    return (
-      <section className="mt-8 rounded-[2rem] border border-black/10 bg-white p-8 shadow-sm">
-        <div className="flex items-center gap-3 text-sm font-medium text-neutral-600">
-          <LoaderCircle className="animate-spin" size={20} />
-          Checking this browser&apos;s voting status...
-        </div>
-      </section>
-    );
-  }
-
-  if (hasVoted) {
-    return (
-      <section className="mt-8 overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-sm">
-        <div className="border-b border-black/10 bg-emerald-50 p-6 sm:p-8">
+  return (
+    <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+      {checkingVote ? (
+        <section className="rounded-[2rem] border border-black/10 bg-white p-8 shadow-sm">
+          <div className="flex items-center gap-3 text-sm font-medium text-neutral-600">
+            <LoaderCircle className="animate-spin" size={20} />
+            Checking this browser&apos;s voting status...
+          </div>
+        </section>
+      ) : hasVoted ? (
+        <section className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-6 shadow-sm sm:p-8">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-700" size={24} />
             <div>
@@ -182,55 +211,62 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
                   Your choice: <span className="font-semibold text-neutral-900">{selectedLabel}</span>
                 </p>
               )}
+              <p className="mt-2 text-sm leading-6 text-neutral-600">
+                This browser has voted in this poll. Thank you for taking part.
+              </p>
             </div>
           </div>
-        </div>
+        </section>
+      ) : (
+        <VoteForm
+          pollId={pollId}
+          question={question}
+          votingOpen={votingOpen}
+          options={options}
+          selectedOptionId={selectedOptionId}
+          onSelect={(id) => {
+            setSelectedOptionId(id);
+            setMessage("");
+          }}
+          message={message}
+          submitting={submitting}
+          onSubmit={submitVote}
+        />
+      )}
 
-        <div className="p-6 sm:p-8">
-          <div className="flex items-center gap-2">
-            <BarChart3 size={20} className="text-[#7b1025]" />
-            <h3 className="text-xl font-semibold">Current reader results</h3>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-neutral-500">
-            Percentages reflect participating Webfit News readers. Raw response totals are not displayed.
-          </p>
+      <ResultsPanel
+        results={results}
+        hidden={resultsHidden}
+        error={resultsError}
+        highlightOptionId={hasVoted ? selectedOptionId : ""}
+      />
+    </div>
+  );
+}
 
-          {results.length === 0 ? (
-            <p className="mt-6 rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
-              {resultsHidden
-                ? "Results for this poll are not public at the moment."
-                : "Results could not be loaded right now. Please refresh the page shortly."}
-            </p>
-          ) : (
-            <div className="mt-6 space-y-5">
-              {results.map((result) => {
-                const percentage = Number(result.percentage || 0);
-                return (
-                  <div key={result.option_id}>
-                    <div className="mb-2 flex items-center justify-between gap-4 text-sm">
-                      <span className="font-medium text-neutral-900">{result.option_label}</span>
-                      <span className="font-semibold tabular-nums text-neutral-700">
-                        {percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-neutral-100">
-                      <div
-                        className="h-full rounded-full bg-[#7b1025] transition-[width] duration-500"
-                        style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-    );
-  }
-
+function VoteForm({
+  pollId,
+  question,
+  votingOpen,
+  options,
+  selectedOptionId,
+  onSelect,
+  message,
+  submitting,
+  onSubmit,
+}: {
+  pollId: string;
+  question: string;
+  votingOpen: boolean;
+  options: PollOption[];
+  selectedOptionId: string;
+  onSelect: (id: string) => void;
+  message: string;
+  submitting: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
   return (
-    <section className="mt-8 rounded-[2rem] border border-black/10 bg-white p-6 shadow-sm sm:p-8">
+    <section className="rounded-[2rem] border border-black/10 bg-white p-6 shadow-sm sm:p-8">
       <div className="flex items-center gap-3">
         <span className="rounded-xl bg-[#7b1025]/10 p-2.5 text-[#7b1025]">
           <Vote size={22} />
@@ -246,7 +282,7 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
           This poll is not currently accepting responses.
         </div>
       ) : (
-        <form className="mt-7" onSubmit={submitVote}>
+        <form className="mt-7" onSubmit={onSubmit}>
           <div className="grid gap-3 sm:grid-cols-2">
             {options.map((option) => {
               const selected = selectedOptionId === option.id;
@@ -265,10 +301,7 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
                       name={`poll-${pollId}`}
                       value={option.id}
                       checked={selected}
-                      onChange={() => {
-                        setSelectedOptionId(option.id);
-                        setMessage("");
-                      }}
+                      onChange={() => onSelect(option.id)}
                       className="mt-1 h-4 w-4 accent-[#7b1025]"
                     />
                     <div>
@@ -299,10 +332,84 @@ export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, option
           </button>
 
           <p className="mt-4 text-xs leading-5 text-neutral-500">
-            No email or sign-up. This browser can submit one response to this poll.{" "}
-            {resultsPublic ? "Results are shown after voting." : "Results are not public at the moment."}
+            No email or sign-up. This browser can submit one response to this poll.
           </p>
         </form>
+      )}
+    </section>
+  );
+}
+
+function ResultsPanel({
+  results,
+  hidden,
+  error,
+  highlightOptionId,
+}: {
+  results: PollResult[];
+  hidden: boolean;
+  error: boolean;
+  highlightOptionId: string;
+}) {
+  const hasVotes = results.some((result) => Number(result.percentage || 0) > 0);
+
+  return (
+    <section className="rounded-[2rem] border border-black/10 bg-white p-6 shadow-sm sm:p-8">
+      <div className="flex items-center gap-2">
+        <BarChart3 size={20} className="text-[#7b1025]" />
+        <h3 className="text-xl font-semibold">Live reader results</h3>
+      </div>
+      <p className="mt-2 text-sm leading-6 text-neutral-500">
+        Percentages reflect participating Webfit News readers. Raw response totals are not displayed.
+      </p>
+
+      {hidden ? (
+        <p className="mt-6 rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
+          Results for this poll are not public at the moment.
+        </p>
+      ) : error ? (
+        <p className="mt-6 rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
+          Results could not be loaded right now. Please refresh the page shortly.
+        </p>
+      ) : !hasVotes ? (
+        <p className="mt-6 rounded-2xl bg-[#fbf8f1] p-5 text-sm font-medium text-neutral-700">
+          No votes yet. Be the first.
+        </p>
+      ) : (
+        <div className="mt-6 space-y-5">
+          {results.map((result) => {
+            const percentage = Number(result.percentage || 0);
+            const mine = result.option_id === highlightOptionId;
+            return (
+              <div
+                key={result.option_id}
+                className={mine ? "-mx-3 rounded-2xl bg-[#7b1025]/5 px-3 py-2 ring-1 ring-[#7b1025]/30" : ""}
+              >
+                <div className="mb-2 flex items-center justify-between gap-4 text-sm">
+                  <span className={mine ? "font-semibold text-[#7b1025]" : "font-medium text-neutral-900"}>
+                    {result.option_label}
+                    {mine && (
+                      <span className="ml-2 rounded-full bg-[#7b1025] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+                        Your vote
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-semibold tabular-nums text-neutral-700">
+                    {percentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-neutral-100">
+                  <div
+                    className={`h-full rounded-full transition-[width] duration-500 ${
+                      mine ? "bg-[#7b1025]" : "bg-[#7b1025]/60"
+                    }`}
+                    style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </section>
   );
