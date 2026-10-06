@@ -6,8 +6,6 @@ import {
   getClientIp,
   hashValue,
   newVoterToken,
-  MIN_POLL_VOTES,
-  gatePublicResults,
   toPublicResults,
 } from "@/lib/voting";
 
@@ -279,13 +277,12 @@ export async function POST(request: NextRequest) {
       ip_hash: ipHash,
     });
 
-    // Results: percentages only, never raw counts, and locked until a poll
-    // has MIN_POLL_VOTES so small totals can't be worked out from the %.
+    // Results: percentages only, never raw counts.
     const { data: resultsData, error: resultsError } = await admin.rpc("get_public_poll_results", {
       requested_poll_id: pollId,
     });
     if (resultsError) console.error("Post-vote results load failed:", resultsError);
-    const { locked: resultsLocked, results } = gatePublicResults(Array.isArray(resultsData) ? resultsData : []);
+    const results = toPublicResults(Array.isArray(resultsData) ? resultsData : []);
 
     let electorateResults: ReturnType<typeof toPublicResults> = [];
     if (poll.poll_type === "electorate_issue") {
@@ -293,7 +290,7 @@ export async function POST(request: NextRequest) {
         admin.from("poll_options").select("id, label").eq("poll_id", pollId).eq("is_active", true).order("display_order"),
         admin.from("votes").select("option_id").eq("poll_id", pollId).eq("electorate_name", electorateName).eq("status", "valid"),
       ]);
-      if ((electorateVotes ?? []).length >= MIN_POLL_VOTES) electorateResults = percentagesFrom(
+      electorateResults = percentagesFrom(
         (allOptions ?? []).map((o) => ({ key: o.id as string, label: o.label as string })),
         (electorateVotes ?? []).map((v) => v.option_id as string),
       ).map((r) => ({ option_id: r.key, option_label: r.label, percentage: r.percentage }));
@@ -307,7 +304,7 @@ export async function POST(request: NextRequest) {
         .eq("poll_id", pollId)
         .eq("status", "valid")
         .not("financial_pressure", "is", null);
-      if ((pressureVotes ?? []).length >= MIN_POLL_VOTES) pressureResults = percentagesFrom(
+      pressureResults = percentagesFrom(
         VALID_FINANCIAL_PRESSURES.map((key) => ({ key, label: FINANCIAL_PRESSURE_LABELS[key] as string })),
         (pressureVotes ?? [])
           .map((v) => String(v.financial_pressure || ""))
@@ -318,8 +315,6 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       results,
-      resultsLocked,
-      minimumVotes: MIN_POLL_VOTES,
       nationalResults: results,
       electorateResults,
       pressureResults,

@@ -2,7 +2,6 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { Check, CheckCircle2, ChevronDown, Vote } from "lucide-react";
-import { ResultsLockedNotice } from "@/components/results-locked-notice";
 
 type PollOption = {
   id: string;
@@ -137,8 +136,6 @@ export function ElectoratePartyVoteForm({
             </div>
           </div>
         </div>
-
-        {results.length === 0 && !alreadyVoted && <ResultsLockedNotice />}
 
         {results.length > 0 && (
           <div className="rounded-[2rem] border border-black/10 bg-white p-6 shadow-sm md:p-9">

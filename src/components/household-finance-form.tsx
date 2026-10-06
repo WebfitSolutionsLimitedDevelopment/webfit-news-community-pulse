@@ -10,7 +10,6 @@ import {
   TrendingUp,
   WalletCards,
 } from "lucide-react";
-import { ResultsLockedNotice } from "@/components/results-locked-notice";
 
 type PollOption = {
   id: string;
@@ -189,7 +188,6 @@ export function HouseholdFinanceForm({
               </div>
             </div>
 
-            {results.length === 0 && <ResultsLockedNotice className="mt-7" />}
             <div className="mt-7 space-y-5">
               {results.map((row) => (
                 <div key={row.option_id}>
@@ -255,7 +253,7 @@ export function HouseholdFinanceForm({
               </div>
             ) : (
               <p className="mt-7 rounded-2xl bg-neutral-50 p-5 text-sm leading-6 text-neutral-600">
-                These results unlock once enough people have answered.
+                No financial-pressure answers are available yet.
               </p>
             )}
           </div>

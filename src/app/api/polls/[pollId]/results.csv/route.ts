@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { MIN_POLL_VOTES } from "@/lib/voting-thresholds";
 
 /** Raw vote counts are only included for signed-in, active admins. */
 async function isActiveAdmin() {
@@ -142,12 +141,8 @@ export async function GET(
       ["Poll", poll.title],
       ["Generated at", generatedAt],
       [],
-      ...(totalVerifiedResponses < MIN_POLL_VOTES
-        ? [["Results", `Results unlock once this poll has at least ${MIN_POLL_VOTES} votes.`]]
-        : [
-            ["Party or response option", "Abbreviation", "Percentage"],
-            ...rows.map((row) => [row.option, row.abbreviation, row.percentage.toFixed(1)]),
-          ]),
+      ["Party or response option", "Abbreviation", "Percentage"],
+      ...rows.map((row) => [row.option, row.abbreviation, row.percentage.toFixed(1)]),
       [],
       [
         "Methodology note",

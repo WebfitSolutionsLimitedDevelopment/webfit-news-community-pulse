@@ -13,7 +13,6 @@ import { PartyLogo } from "@/components/party-logo";
 import { PartyResultsList } from "@/components/party-results-list";
 import { SiteFooter } from "@/components/site-footer";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { MIN_NATIONAL_VOTES, MIN_POLL_VOTES } from "@/lib/voting-thresholds";
 
 export const dynamic = "force-dynamic";
 
@@ -129,12 +128,8 @@ export default async function ElectionPulsePage() {
       return voteDifference || a.display_order - b.display_order;
     });
 
-    // Electorate results stay hidden until there are enough votes that the
-    // percentages can't be used to work out the total.
-    const electorateUnlocked = electorateTotal >= MIN_POLL_VOTES;
-
     const leadingOption =
-      electorateUnlocked
+      electorateTotal > 0
         ? (ranked.find(
             (option) => !NON_LEADER_PARTY_KEYS.has(normalisePartyKey(option)),
           ) ?? null)
@@ -155,7 +150,7 @@ export default async function ElectionPulsePage() {
       };
 
       current.voteCount += voteCount;
-      if (electorateUnlocked) {
+      if (electorateTotal > 0) {
         current.electoratePercentages.push((voteCount / electorateTotal) * 100);
       }
 
@@ -187,7 +182,7 @@ export default async function ElectionPulsePage() {
         : null,
       leaderVotes: leadingOption ? Number(leadingOption.vote_count || 0) : 0,
       leaderShare:
-        leadingOption && electorateUnlocked
+        leadingOption && electorateTotal > 0
           ? (Number(leadingOption.vote_count || 0) / electorateTotal) * 100
           : 0,
     });
@@ -210,8 +205,6 @@ export default async function ElectionPulsePage() {
       electorateLeads: party.electorateLeads,
     }))
     .sort((a, b) => b.rawShare - a.rawShare || a.label.localeCompare(b.label));
-
-  const nationalUnlocked = totalResponses >= MIN_NATIONAL_VOTES;
 
   const headlineParties = parties.filter(
     (party) => !NON_LEADER_PARTY_KEYS.has(party.key),
@@ -326,7 +319,7 @@ export default async function ElectionPulsePage() {
                       All votes combined
                     </h2>
                   </div>
-                  {nationalUnlocked && leadingParties.length > 0 && (
+                  {leadingParties.length > 0 && (
                     <div className="inline-flex items-center gap-2 rounded-full bg-[#7b1025]/8 px-4 py-2 text-sm font-semibold text-[#7b1025]">
                       <Trophy size={16} />
                       {leadingParties.length === 1 ? "Current leader: " : "Current joint leaders: "}
@@ -337,24 +330,16 @@ export default async function ElectionPulsePage() {
                   )}
                 </div>
 
-                {!nationalUnlocked ? (
+                {totalResponses === 0 ? (
                   <div className="mt-6 rounded-[1.5rem] border border-dashed border-[#b88a2a]/50 bg-[#fbf8f1] px-6 py-10 text-center">
                     <BarChart3 className="mx-auto text-[#7b1025]" size={30} />
                     <h3 className="mt-4 text-xl font-semibold">
-                      National results unlock at {MIN_NATIONAL_VOTES} votes
+                      No votes yet
                     </h3>
                     <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-neutral-600">
-                      We only publish the national ranking once enough readers
-                      have voted for it to be meaningful. Vote in your
-                      electorate and share it to help unlock the results.
+                      Ranked party results will appear here after the first
+                      reader votes in an electorate party vote poll.
                     </p>
-                    <Link
-                      href="/electorates-2026"
-                      className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-[#7b1025] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#5c0b1b]"
-                    >
-                      Vote now
-                      <ArrowRight size={16} />
-                    </Link>
                   </div>
                 ) : (
                   <PartyResultsList
@@ -394,7 +379,7 @@ export default async function ElectionPulsePage() {
                         Equal-electorate average
                       </p>
                       <p className="mt-1">
-                        Each electorate with at least {MIN_POLL_VOTES} votes
+                        Each electorate with at least one vote
                         receives equal weight, regardless of how many people
                         participated there.
                       </p>
@@ -446,7 +431,7 @@ export default async function ElectionPulsePage() {
                         />
                       </div>
 
-                      {electorate.totalResponses >= MIN_POLL_VOTES && electorate.leader ? (
+                      {electorate.totalResponses > 0 && electorate.leader ? (
                         <div className="mt-5">
                           <p className="text-sm text-neutral-500">
                             Leading participant preference
@@ -469,7 +454,7 @@ export default async function ElectionPulsePage() {
                         </div>
                       ) : (
                         <p className="mt-5 text-sm leading-6 text-neutral-500">
-                          Results unlock at {MIN_POLL_VOTES} votes.
+                          No votes yet. Be the first.
                         </p>
                       )}
 
