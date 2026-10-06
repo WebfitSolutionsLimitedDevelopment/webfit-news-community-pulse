@@ -41,7 +41,7 @@ export default async function ElectoratesPage() {
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#9d741f]">2026 electorate party vote polls</p>
               <h1 className="mt-4 text-balance text-4xl font-semibold tracking-[-0.04em] sm:text-5xl lg:text-6xl">Choose your electorate</h1>
               <p className="mt-5 max-w-3xl text-lg leading-8 text-neutral-600">
-                Select the electorate where you are enrolled or ordinarily live. Then pick your party and press Vote. No email or sign-up needed. One electorate vote per person across this series.
+                Select the electorate where you are enrolled or ordinarily live. Then pick your party and press Vote. No email or sign-up needed. One electorate vote per browser across this series.
               </p>
             </div>
             <div className="rounded-[1.5rem] border border-[#b88a2a]/30 bg-[#fbf8f1] p-6">
