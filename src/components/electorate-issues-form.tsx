@@ -2,20 +2,14 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
   ArrowRight,
-  BarChart3,
   Check,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
   Loader2,
-  LockKeyhole,
-  Mail,
   MapPin,
-  RefreshCw,
   Search,
-  ShieldCheck,
   Sparkles,
   X,
 } from "lucide-react";
@@ -37,7 +31,6 @@ type Electorate = {
 type PollResult = {
   option_id: string;
   option_label: string;
-  vote_count: number;
   percentage: number;
 };
 
@@ -49,10 +42,8 @@ type Props = {
   electorates: Electorate[];
 };
 
-type Step = "vote" | "verify" | "results";
+type Step = "vote" | "results";
 type MessageType = "error" | "info" | "success";
-
-const RESEND_WAIT_SECONDS = 60;
 
 const SEVERITY_OPTIONS = [
   { value: "critical", label: "Critical", help: "Urgent action needed" },
@@ -109,18 +100,12 @@ export function ElectorateIssuesForm({
   const [selectedOption, setSelectedOption] = useState("");
   const [severity, setSeverity] = useState("");
   const [comment, setComment] = useState("");
-  const [email, setEmail] = useState("");
-  const [verificationId, setVerificationId] = useState("");
-  const [otp, setOtp] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<MessageType>("info");
   const [submitting, setSubmitting] = useState(false);
-  const [resendCountdown, setResendCountdown] = useState(0);
   const [showOptional, setShowOptional] = useState(false);
   const [electorateResults, setElectorateResults] = useState<PollResult[]>([]);
   const [nationalResults, setNationalResults] = useState<PollResult[]>([]);
-  const [electorateResponseCount, setElectorateResponseCount] = useState(0);
-  const [nationalResponseCount, setNationalResponseCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState("");
 
   const electorateBoxRef = useRef<HTMLDivElement>(null);
@@ -151,9 +136,7 @@ export function ElectorateIssuesForm({
   );
 
   const completionCount =
-    Number(Boolean(selectedElectorate)) +
-    Number(Boolean(selectedOption)) +
-    Number(Boolean(email.trim()));
+    Number(Boolean(selectedElectorate)) + Number(Boolean(selectedOption));
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -169,22 +152,6 @@ export function ElectorateIssuesForm({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  useEffect(() => {
-    if (resendCountdown <= 0) return;
-
-    const timer = window.setInterval(() => {
-      setResendCountdown((current) => {
-        if (current <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-
-        return current - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [resendCountdown]);
 
   function showMessage(text: string, type: MessageType = "info") {
     setMessage(text);
@@ -198,7 +165,7 @@ export function ElectorateIssuesForm({
     setMessage("");
   }
 
-  async function requestVerification() {
+  async function submitVote() {
     if (!votingOpen) {
       showMessage("Voting is not currently open.", "error");
       return;
@@ -214,23 +181,17 @@ export function ElectorateIssuesForm({
       return;
     }
 
-    if (!email.trim()) {
-      showMessage("Please enter your email address.", "error");
-      return;
-    }
-
     setSubmitting(true);
     setMessage("");
 
     try {
-      const response = await fetch("/api/voting/request-verification", {
+      const response = await fetch("/api/voting/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pollId,
           pollSlug,
           optionId: selectedOption,
-          email: email.trim().toLowerCase(),
           electorateName: selectedElectorate,
           issueSeverity: severity || null,
           participantComment: comment.trim() || null,
@@ -240,77 +201,7 @@ export function ElectorateIssuesForm({
       const result = await response.json();
 
       if (!response.ok) {
-        showMessage(
-          result.error || "Unable to send the verification code.",
-          "error"
-        );
-        return;
-      }
-
-      if (!result.verificationId) {
-        showMessage("No verification ID was returned. Please try again.", "error");
-        return;
-      }
-
-      setVerificationId(result.verificationId);
-      setStep("verify");
-      setResendCountdown(RESEND_WAIT_SECONDS);
-      showMessage(
-        `A six-digit verification code has been sent to ${email
-          .trim()
-          .toLowerCase()}.`,
-        "success"
-      );
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
-      showMessage("Something went wrong. Please try again.", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleVoteSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    await requestVerification();
-  }
-
-  async function handleVerifySubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!verificationId) {
-      showMessage("Verification session is missing. Request a new code.", "error");
-      return;
-    }
-
-    if (!/^\d{6}$/.test(otp)) {
-      showMessage("Enter the six-digit code from your email.", "error");
-      return;
-    }
-
-    setSubmitting(true);
-    setMessage("");
-
-    try {
-      const response = await fetch("/api/voting/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pollId,
-          pollSlug,
-          optionId: selectedOption,
-          email: email.trim().toLowerCase(),
-          verificationId,
-          otp,
-          electorateName: selectedElectorate,
-          issueSeverity: severity || null,
-          participantComment: comment.trim() || null,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        showMessage(result.error || "Unable to verify your response.", "error");
+        showMessage(result.error || "We couldn't record your vote. Please try again.", "error");
         return;
       }
 
@@ -324,23 +215,24 @@ export function ElectorateIssuesForm({
             ? result.results
             : []
       );
-      setElectorateResponseCount(Number(result.electorateResponseCount ?? 0));
-      setNationalResponseCount(
-        Number(result.nationalResponseCount ?? result.totalVerifiedResponses ?? 0)
-      );
       setLastUpdated(
         typeof result.lastUpdated === "string"
           ? result.lastUpdated
           : new Date().toISOString()
       );
       setStep("results");
-      showMessage("Your response has been verified and counted.", "success");
+      showMessage("Your vote has been counted.", "success");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       showMessage("Something went wrong. Please try again.", "error");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleVoteSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitVote();
   }
 
   return (
@@ -361,8 +253,8 @@ export function ElectorateIssuesForm({
                 Tell us what matters most
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-                Choose your electorate and one issue. Verification takes less
-                than a minute.
+                Choose your electorate and one issue, then submit. No email
+                or sign-up needed.
               </p>
             </div>
 
@@ -612,43 +504,6 @@ export function ElectorateIssuesForm({
                 />
               </div>
 
-              <div className="mt-5">
-                <label
-                  htmlFor="electorate-email"
-                  className="text-sm font-semibold"
-                >
-                  Email verification
-                </label>
-                <div className="relative mt-2">
-                  <Mail
-                    size={17}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/40"
-                  />
-                  <input
-                    id="electorate-email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(event) => {
-                      setEmail(event.target.value);
-                      setMessage("");
-                    }}
-                    placeholder="you@example.com"
-                    className="h-12 w-full rounded-xl border border-white/12 bg-white/8 pl-11 pr-4 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#d8b760] focus:ring-4 focus:ring-[#d8b760]/10"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-start gap-3 rounded-xl bg-white/5 p-3.5">
-                <LockKeyhole
-                  size={16}
-                  className="mt-0.5 shrink-0 text-[#d8b760]"
-                />
-                <p className="text-xs leading-5 text-white/55">
-                  Used only for one-time verification. Never published or added
-                  to a mailing list.
-                </p>
-              </div>
 
               <Message text={message} type={messageType} dark />
 
@@ -660,114 +515,24 @@ export function ElectorateIssuesForm({
                 {submitting ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    Sending code
+                    Saving your vote
                   </>
                 ) : (
                   <>
-                    Continue
+                    Submit my vote
                     <ArrowRight size={18} />
                   </>
                 )}
               </button>
 
               <p className="mt-3 text-center text-[11px] leading-5 text-white/40">
-                {completionCount}/3 required details completed
+                {completionCount}/2 required details completed
               </p>
             </div>
           </aside>
         </form>
       )}
 
-      {step === "verify" && (
-        <form
-          onSubmit={handleVerifySubmit}
-          className="mx-auto mt-5 max-w-2xl rounded-3xl border border-black/8 bg-white p-5 shadow-[0_18px_60px_rgba(27,22,16,0.07)] sm:p-8"
-        >
-          <button
-            type="button"
-            onClick={() => {
-              setStep("vote");
-              setOtp("");
-              setMessage("");
-            }}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-500 hover:text-neutral-950"
-          >
-            <ArrowLeft size={17} />
-            Edit response
-          </button>
-
-          <div className="mt-8 grid h-14 w-14 place-items-center rounded-2xl bg-[#7b1025] text-white">
-            <Mail size={24} />
-          </div>
-
-          <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-[#9d741f]">
-            Final step
-          </p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.035em]">
-            Check your email
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-neutral-600">
-            Enter the six-digit code sent to{" "}
-            <strong>{email.trim().toLowerCase()}</strong>.
-          </p>
-
-          <div className="mt-6 grid gap-3 rounded-2xl bg-[#f8f5ee] p-4 sm:grid-cols-2">
-            <SummaryRow label="Electorate" value={selectedElectorate} />
-            <SummaryRow label="Issue" value={selectedIssue?.label || ""} />
-          </div>
-
-          <label
-            htmlFor="electorate-otp"
-            className="mt-7 block text-sm font-semibold"
-          >
-            Verification code
-          </label>
-          <input
-            id="electorate-otp"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            value={otp}
-            onChange={(event) =>
-              setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
-            }
-            placeholder="000000"
-            className="mt-2 h-16 w-full rounded-2xl border border-black/10 bg-neutral-50 px-4 text-center text-2xl font-semibold tracking-[0.4em] outline-none transition focus:border-[#7b1025] focus:bg-white focus:ring-4 focus:ring-[#7b1025]/8"
-          />
-
-          <Message text={message} type={messageType} />
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#7b1025] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#65101f] disabled:opacity-50"
-          >
-            {submitting ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Verifying
-              </>
-            ) : (
-              <>
-                <ShieldCheck size={18} />
-                Verify and view results
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            disabled={submitting || resendCountdown > 0}
-            onClick={requestVerification}
-            className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-black/10 px-5 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-50"
-          >
-            <RefreshCw size={16} />
-            {resendCountdown > 0
-              ? `Resend in ${resendCountdown}s`
-              : "Resend verification code"}
-          </button>
-        </form>
-      )}
 
       {step === "results" && (
         <div className="mt-5 space-y-5">
@@ -778,7 +543,7 @@ export function ElectorateIssuesForm({
                   <CheckCircle2 size={24} />
                 </div>
                 <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-[#d8b760]">
-                  Response verified
+                  Vote recorded
                 </p>
                 <h2 className="mt-2 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
                   Your local result is live
@@ -797,24 +562,22 @@ export function ElectorateIssuesForm({
           <ResultsPanel
             eyebrow={selectedElectorate}
             title="Top issues in your electorate"
-            total={electorateResponseCount}
             results={electorateResults}
             selectedOptionId={selectedOption}
-            emptyText="Your response may be the first verified response for this electorate."
+            emptyText="Your vote may be the first one for this electorate."
           />
 
           <ResultsPanel
             eyebrow="New Zealand"
             title="Nationwide comparison"
-            total={nationalResponseCount}
             results={nationalResults}
             selectedOptionId={selectedOption}
-            emptyText="National results will appear as verified responses are received."
+            emptyText="National results will appear as votes come in."
           />
 
           <div className="flex flex-col gap-2 rounded-2xl border border-black/8 bg-white p-4 text-xs leading-5 text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
             <p>
-              Results reflect voluntary verified participants and are not a
+              Results reflect readers who chose to take part and are not a
               representative scientific opinion poll.
             </p>
             {lastUpdated && (
@@ -835,12 +598,12 @@ export function ElectorateIssuesForm({
 }
 
 function StepHeader({ step }: { step: Step }) {
-  const active = step === "vote" ? 1 : step === "verify" ? 2 : 3;
-  const items = ["Choose", "Verify", "Results"];
+  const active = step === "results" ? 2 : 1;
+  const items = ["Choose", "Results"];
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white p-2 shadow-sm">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {items.map((label, index) => {
           const number = index + 1;
           const current = number === active;
@@ -955,20 +718,18 @@ function Message({
 function ResultsPanel({
   eyebrow,
   title,
-  total,
   results,
   selectedOptionId,
   emptyText,
 }: {
   eyebrow: string;
   title: string;
-  total: number;
   results: PollResult[];
   selectedOptionId: string;
   emptyText: string;
 }) {
   const ordered = [...results].sort(
-    (a, b) => Number(b.vote_count) - Number(a.vote_count)
+    (a, b) => Number(b.percentage) - Number(a.percentage)
   );
 
   return (
@@ -981,10 +742,6 @@ function ResultsPanel({
           <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
             {title}
           </h3>
-        </div>
-        <div className="inline-flex w-fit items-center gap-2 rounded-full bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-600">
-          <BarChart3 size={15} />
-          {total.toLocaleString("en-NZ")} verified
         </div>
       </div>
 
@@ -1028,9 +785,6 @@ function ResultsPanel({
                   <div className="shrink-0 text-right">
                     <p className="text-lg font-semibold text-[#7b1025]">
                       {percentage.toFixed(1)}%
-                    </p>
-                    <p className="text-xs text-neutral-400">
-                      {Number(result.vote_count).toLocaleString("en-NZ")} votes
                     </p>
                   </div>
                 </div>

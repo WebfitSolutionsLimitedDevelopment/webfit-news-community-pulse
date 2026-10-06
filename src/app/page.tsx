@@ -109,7 +109,7 @@ export default async function HomePage() {
                     size={18}
                     className="shrink-0 text-[#9d741f]"
                   />
-                  One verified response per participant
+                  One vote per person, no sign-up needed
                 </div>
 
                 <div className="flex gap-3 text-sm text-neutral-700">

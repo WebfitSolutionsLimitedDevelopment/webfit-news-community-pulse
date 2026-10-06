@@ -1,6 +1,7 @@
 import { createHmac, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { toPublicResults } from "@/lib/voting";
 
 const COOKIE_NAME = "webfit_pulse_voter";
 const MAX_IP_VOTES_PER_10_MIN = 8;
@@ -151,10 +152,9 @@ export async function POST(request: NextRequest) {
     });
     if (resultsError) throw new Error(resultsError.message);
 
-    const results = (Array.isArray(resultsData) ? resultsData : []) as ResultRow[];
-    const totalResponses = results.reduce((sum, row) => sum + Number(row.vote_count || 0), 0);
+    const results = toPublicResults((Array.isArray(resultsData) ? resultsData : []) as ResultRow[]);
 
-    const response = NextResponse.json({ success: true, results, totalResponses });
+    const response = NextResponse.json({ success: true, results });
 
     if (isNewToken) {
       response.cookies.set(COOKIE_NAME, voterToken, {

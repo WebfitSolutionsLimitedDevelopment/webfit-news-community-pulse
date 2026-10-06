@@ -6,7 +6,6 @@ import {
   MapPin,
   ShieldCheck,
   Trophy,
-  Users,
 } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
@@ -241,13 +240,13 @@ export default async function ElectionPulsePage() {
                 Electorate party vote dashboard
               </h1>
               <p className="mt-5 max-w-3xl text-lg leading-8 text-neutral-600">
-                A live summary of verified reader participation across
-                individual New Zealand electorate party vote polls.
+                A live summary of reader votes across individual New Zealand
+                electorate party vote polls.
               </p>
               <div className="mt-7 flex flex-wrap gap-3 text-sm font-medium text-neutral-600">
                 <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2">
                   <ShieldCheck size={16} className="text-[#7b1025]" />
-                  One electorate party response per email
+                  One electorate vote per person
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2">
                   <BarChart3 size={16} className="text-[#7b1025]" />
@@ -255,6 +254,13 @@ export default async function ElectionPulsePage() {
                 </span>
               </div>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Link
+                  href="/electorates-2026"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#7b1025] px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-[#5c0b1b]"
+                >
+                  Vote now
+                  <ArrowRight size={18} />
+                </Link>
                 <DashboardRefreshButton />
                 <p className="text-sm text-neutral-500">
                   Last updated {lastUpdated} NZ time
@@ -262,12 +268,7 @@ export default async function ElectionPulsePage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <MetricCard
-                label="Verified responses"
-                value={totalResponses}
-                icon={<Users size={20} />}
-              />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <MetricCard
                 label="Electorate polls available"
                 value={electorates.length}
@@ -313,7 +314,7 @@ export default async function ElectionPulsePage() {
                       Combined participant preference
                     </p>
                     <h2 className="mt-2 text-2xl font-semibold">
-                      All verified responses
+                      All votes combined
                     </h2>
                   </div>
                   {leadingParties.length > 0 && (
@@ -331,15 +332,25 @@ export default async function ElectionPulsePage() {
                   <div className="mt-6 rounded-[1.5rem] border border-dashed border-[#b88a2a]/50 bg-[#fbf8f1] px-6 py-10 text-center">
                     <BarChart3 className="mx-auto text-[#7b1025]" size={30} />
                     <h3 className="mt-4 text-xl font-semibold">
-                      No verified responses yet
+                      No votes yet
                     </h3>
                     <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-neutral-600">
                       Ranked party results will appear here after the first
-                      verified participant completes an electorate party vote.
+                      reader votes in an electorate party vote poll.
                     </p>
                   </div>
                 ) : (
-                  <PartyResultsList parties={parties} />
+                  <PartyResultsList
+                    parties={parties.map((party) => ({
+                      key: party.key,
+                      label: party.label,
+                      shortLabel: party.shortLabel,
+                      logoUrl: party.logoUrl,
+                      rawShare: party.rawShare,
+                      equalElectorateShare: party.equalElectorateShare,
+                      electorateLeads: party.electorateLeads,
+                    }))}
+                  />
                 )}
               </div>
 
@@ -357,7 +368,7 @@ export default async function ElectionPulsePage() {
                         Raw participant share
                       </p>
                       <p className="mt-1">
-                        All verified votes are combined. A high-response
+                        All votes are combined. A high-turnout
                         electorate therefore contributes more to this figure.
                       </p>
                     </div>
@@ -366,7 +377,7 @@ export default async function ElectionPulsePage() {
                         Equal-electorate average
                       </p>
                       <p className="mt-1">
-                        Each electorate with at least one verified response
+                        Each electorate with at least one vote
                         receives equal weight, regardless of how many people
                         participated there.
                       </p>
@@ -441,13 +452,12 @@ export default async function ElectionPulsePage() {
                         </div>
                       ) : (
                         <p className="mt-5 text-sm leading-6 text-neutral-500">
-                          No verified responses yet.
+                          No votes yet. Be the first.
                         </p>
                       )}
 
-                      <p className="mt-5 border-t border-black/10 pt-4 text-xs font-medium text-neutral-500">
-                        {electorate.totalResponses.toLocaleString("en-NZ")} verified{" "}
-                        {electorate.totalResponses === 1 ? "response" : "responses"}
+                      <p className="mt-5 border-t border-black/10 pt-4 text-xs font-semibold text-[#7b1025]">
+                        {electorate.status === "open" ? "Vote now" : "View results"}
                       </p>
                     </Link>
                   ))}

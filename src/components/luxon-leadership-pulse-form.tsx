@@ -13,7 +13,6 @@ type PollOption = {
 type PollResult = {
   option_id: string;
   option_label: string;
-  vote_count: number;
   percentage: number;
 };
 
@@ -39,7 +38,6 @@ export function LuxonLeadershipPulseForm({ pollId, votingOpen, options }: Props)
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState<PollResult[]>([]);
-  const [totalResponses, setTotalResponses] = useState(0);
   const [submitted, setSubmitted] = useState(false);
 
   const selectedLabel = useMemo(
@@ -82,7 +80,6 @@ export function LuxonLeadershipPulseForm({ pollId, votingOpen, options }: Props)
       }
 
       setResults(Array.isArray(data.results) ? data.results : []);
-      setTotalResponses(Number(data.totalResponses || 0));
       setSubmitted(true);
     } catch {
       setError("Something went wrong while submitting your response. Please try again.");
@@ -116,7 +113,7 @@ export function LuxonLeadershipPulseForm({ pollId, votingOpen, options }: Props)
             <h3 className="text-xl font-semibold">Current reader results</h3>
           </div>
           <p className="mt-2 text-sm leading-6 text-neutral-500">
-            {totalResponses.toLocaleString("en-NZ")} reader response{totalResponses === 1 ? "" : "s"}. Results reflect participating readers only.
+            Results reflect participating readers only.
           </p>
 
           <div className="mt-6 space-y-5">

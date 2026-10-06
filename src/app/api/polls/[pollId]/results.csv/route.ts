@@ -1,5 +1,25 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+
+/** Raw vote counts are only included for signed-in, active admins. */
+async function isActiveAdmin() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: profile } = await createAdminClient()
+      .from("admin_users")
+      .select("is_active")
+      .eq("id", user.id)
+      .maybeSingle();
+    return Boolean(profile?.is_active);
+  } catch {
+    return false;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -95,8 +115,9 @@ export async function GET(
     );
 
     const generatedAt = new Date().toISOString();
+    const includeCounts = await isActiveAdmin();
 
-    const csvLines = [
+    const csvLines = includeCounts ? [
       ["Webfit News Community Pulse"],
       ["Poll", poll.title],
       ["Poll slug", poll.slug],
@@ -113,7 +134,19 @@ export async function GET(
       [],
       [
         "Methodology note",
-        "Results represent verified participants in this Webfit News Community Pulse poll and are not a representative sample of all New Zealand voters.",
+        "Results represent participants in this Webfit News Community Pulse poll and are not a representative sample of all New Zealand voters.",
+      ],
+    ] : [
+      ["Webfit News Community Pulse"],
+      ["Poll", poll.title],
+      ["Generated at", generatedAt],
+      [],
+      ["Party or response option", "Abbreviation", "Percentage"],
+      ...rows.map((row) => [row.option, row.abbreviation, row.percentage.toFixed(1)]),
+      [],
+      [
+        "Methodology note",
+        "Results represent participants in this Webfit News Community Pulse poll and are not a representative sample of all New Zealand voters.",
       ],
     ];
 

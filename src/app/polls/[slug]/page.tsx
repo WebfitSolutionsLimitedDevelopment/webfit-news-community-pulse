@@ -9,7 +9,6 @@ import {
   MailCheck,
   MapPin,
   ShieldCheck,
-  Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BrandHeader } from "@/components/brand-header";
@@ -80,20 +79,6 @@ export default async function PollPage({
     .order("display_order");
 
   const options = (optionsData ?? []) as PollOption[];
-
-  const { data: responseSummary } = await supabase.rpc(
-    "get_public_poll_results",
-    {
-      requested_poll_id: poll.id,
-    }
-  );
-
-  const verifiedResponseCount = Array.isArray(responseSummary)
-    ? responseSummary.reduce(
-        (total, item) => total + Number(item.vote_count ?? 0),
-        0
-      )
-    : 0;
 
   const pollRecord = poll as Record<string, unknown>;
   const pollType =
@@ -214,34 +199,23 @@ export default async function PollPage({
 
             <aside className="rounded-[1.5rem] border border-[#b88a2a]/30 bg-[#fbf8f1] p-5 sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9d741f]">
-                Live participation
+                Quick and anonymous
               </p>
 
-              <div className="mt-4 flex items-end gap-3">
-                <p className="text-5xl font-semibold tracking-[-0.05em]">
-                  {verifiedResponseCount.toLocaleString("en-NZ")}
-                </p>
-                <p className="pb-1 text-sm leading-5 text-neutral-500">
-                  verified
-                  <br />
-                  responses
-                </p>
-              </div>
-
-              <div className="mt-6 space-y-3 border-t border-black/10 pt-5">
+              <div className="mt-4 space-y-3">
                 <TrustLine
                   icon={<CheckCircle2 size={17} />}
-                  text="One verified response per email address"
+                  text="Pick an option and vote in seconds"
                 />
                 <TrustLine
                   icon={<MailCheck size={17} />}
-                  text="Email addresses are never published"
+                  text="No email, code or sign-up needed"
                 />
                 <TrustLine
                   icon={<BarChart3 size={17} />}
                   text={
                     isElectorateIssuePoll
-                      ? "Results appear after verification"
+                      ? "Results appear after you vote"
                       : "Results reflect participating readers"
                   }
                 />

@@ -13,7 +13,6 @@ type PollOption = {
 type ResultRow = {
   option_id: string;
   option_label: string;
-  vote_count: number;
   percentage: number;
 };
 
@@ -35,7 +34,6 @@ export function LeadershipPulseForm({
   const [submitted, setSubmitted] = useState(false);
   const [message, setMessage] = useState("");
   const [results, setResults] = useState<ResultRow[]>([]);
-  const [totalResponses, setTotalResponses] = useState(0);
 
   const selectedLabel = useMemo(
     () => options.find((option) => option.id === selectedOption)?.label || "",
@@ -81,7 +79,6 @@ export function LeadershipPulseForm({
 
       setSubmitted(true);
       setResults(Array.isArray(payload.results) ? payload.results : []);
-      setTotalResponses(Number(payload.totalResponses || 0));
       setMessage("Your response has been recorded.");
     } catch {
       setMessage("Something went wrong. Please try again.");
@@ -115,9 +112,6 @@ export function LeadershipPulseForm({
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
                   Live reader pulse
                 </p>
-                <p className="mt-1 text-sm text-neutral-500">
-                  {totalResponses.toLocaleString("en-NZ")} responses
-                </p>
               </div>
               <BarChart3 className="text-[#7b1025]" />
             </div>
@@ -137,9 +131,6 @@ export function LeadershipPulseForm({
                       style={{ width: `${Math.max(0, Math.min(100, Number(result.percentage)))}%` }}
                     />
                   </div>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    {Number(result.vote_count).toLocaleString("en-NZ")} responses
-                  </p>
                 </div>
               ))}
             </div>
