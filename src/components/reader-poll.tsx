@@ -41,7 +41,7 @@ function sortResults(rows: unknown): PollResult[] {
   );
 }
 
-type VoteStatus = { selectedOptionId: string; results: PollResult[] };
+type VoteStatus = { selectedOptionId: string; results: PollResult[]; resultsHidden: boolean };
 
 /** This browser's existing vote and the results, or null if it has not voted. */
 async function fetchVoteStatus(pollId: string): Promise<VoteStatus | null> {
@@ -51,7 +51,11 @@ async function fetchVoteStatus(pollId: string): Promise<VoteStatus | null> {
   });
   const data = await response.json();
   if (!response.ok || !data.voted) return null;
-  return { selectedOptionId: String(data.selectedOptionId || ""), results: sortResults(data.results) };
+  return {
+    selectedOptionId: String(data.selectedOptionId || ""),
+    results: sortResults(data.results),
+    resultsHidden: Boolean(data.resultsHidden),
+  };
 }
 
 /**
@@ -62,6 +66,7 @@ export function ReaderPoll({ pollId, question, votingOpen, options }: ReaderPoll
   const [selectedOptionId, setSelectedOptionId] = useState("");
   const [results, setResults] = useState<PollResult[]>([]);
   const [hasVoted, setHasVoted] = useState(false);
+  const [resultsHidden, setResultsHidden] = useState(false);
   const [checkingVote, setCheckingVote] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -70,6 +75,7 @@ export function ReaderPoll({ pollId, question, votingOpen, options }: ReaderPoll
     setHasVoted(true);
     setSelectedOptionId(status.selectedOptionId);
     setResults(status.results);
+    setResultsHidden(status.resultsHidden);
   }
 
   useEffect(() => {
@@ -189,7 +195,9 @@ export function ReaderPoll({ pollId, question, votingOpen, options }: ReaderPoll
 
           {results.length === 0 ? (
             <p className="mt-6 rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
-              Results could not be loaded right now. Please refresh the page shortly.
+              {resultsHidden
+                ? "Results for this poll are not public at the moment."
+                : "Results could not be loaded right now. Please refresh the page shortly."}
             </p>
           ) : (
             <div className="mt-6 space-y-5">

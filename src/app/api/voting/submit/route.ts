@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     const { data: poll, error: pollError } = await admin
       .from("polls")
-      .select("id, is_public")
+      .select("id, is_public, results_visibility")
       .eq("id", pollId)
       .maybeSingle();
     if (pollError) throw new Error(pollError.message);
@@ -120,6 +120,16 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
     if (existingVoteError) throw new Error(existingVoteError.message);
     if (!existingVote) return NextResponse.json({ voted: false });
+
+    // Editors can hide results; a returning voter then sees their choice only.
+    if (poll.results_visibility === "private") {
+      return NextResponse.json({
+        voted: true,
+        selectedOptionId: existingVote.option_id,
+        results: [],
+        resultsHidden: true,
+      });
+    }
 
     const { data: resultsData, error: resultsError } = await admin.rpc("get_public_poll_results", {
       requested_poll_id: pollId,

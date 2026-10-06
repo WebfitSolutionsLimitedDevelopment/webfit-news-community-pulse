@@ -67,8 +67,13 @@ export default async function HomePage() {
     (poll) => poll.poll_type !== "electorate_party_vote" && !MONEY_POLL_SLUGS.has(poll.slug),
   );
   // Only link money polls that exist and are public, so a link never 404s.
-  const publicSlugs = new Set((polls ?? []).map((poll) => poll.slug));
-  const moneyPolls = MONEY_POLLS.filter((poll) => publicSlugs.has(poll.slug));
+  const statusBySlug = new Map((polls ?? []).map((poll) => [poll.slug, poll.status as string]));
+  const moneyPolls = MONEY_POLLS.filter((poll) => statusBySlug.has(poll.slug)).map((poll) => ({
+    ...poll,
+    status: statusBySlug.get(poll.slug) ?? "",
+  }));
+  // The general list only shows its empty state when there are no polls at all.
+  const showPollList = featuredPolls.length > 0 || moneyPolls.length === 0;
 
   return (
     <div className="min-h-screen">
@@ -156,7 +161,7 @@ export default async function HomePage() {
         </section>
 
         {moneyPolls.length > 0 && (
-          <section className="mx-auto max-w-7xl px-5 pt-16 md:px-8">
+          <section className={`mx-auto max-w-7xl px-5 md:px-8 ${showPollList ? "pt-16" : "py-16"}`}>
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#b88a2a]">
               Money and banking
             </p>
@@ -171,14 +176,17 @@ export default async function HomePage() {
                   href={`/polls/${poll.slug}`}
                   className="luxury-border group flex flex-col rounded-[2rem] bg-white p-7 transition hover:-translate-y-1 hover:shadow-2xl"
                 >
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
-                    {poll.eyebrow}
-                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
+                      {poll.eyebrow}
+                    </p>
+                    <StatusPill status={poll.status} />
+                  </div>
                   <h3 className="mt-3 flex-1 text-xl font-semibold leading-7 tracking-tight">
                     {poll.question}
                   </h3>
                   <span className="mt-6 inline-flex items-center gap-2 font-semibold text-[#7b1025]">
-                    Vote now
+                    {poll.status === "open" ? "Vote now" : "View poll"}
                     <ArrowRight size={18} className="transition group-hover:translate-x-1" />
                   </span>
                 </Link>
@@ -187,6 +195,7 @@ export default async function HomePage() {
           </section>
         )}
 
+        {showPollList && (
         <section className="mx-auto max-w-7xl px-5 py-16 md:px-8">
           <div className="mb-9 flex items-end justify-between gap-6">
             <div>
@@ -256,6 +265,7 @@ export default async function HomePage() {
             </div>
           )}
         </section>
+        )}
 
         <section className="border-t border-black/10 bg-[#f0ebe1]">
           <div className="mx-auto max-w-7xl px-5 py-16 md:px-8 md:py-20">
