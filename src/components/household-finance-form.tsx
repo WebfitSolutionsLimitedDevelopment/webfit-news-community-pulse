@@ -97,6 +97,7 @@ export function HouseholdFinanceForm({
     []
   );
   const [lastUpdated, setLastUpdated] = useState("");
+  const [resultsHidden, setResultsHidden] = useState(false);
 
   const selectedOption = useMemo(
     () => options.find((option) => option.id === selectedOptionId),
@@ -133,6 +134,7 @@ export function HouseholdFinanceForm({
         throw new Error(data.error || "We couldn't record your vote. Please try again.");
       }
 
+      setResultsHidden(Boolean(data.resultsHidden));
       setResults(data.nationalResults || data.results || []);
       setPressureResults(data.pressureResults || []);
       setLastUpdated(data.lastUpdated || new Date().toISOString());
@@ -168,13 +170,19 @@ export function HouseholdFinanceForm({
                 </h2>
                 <p className="mt-3 text-emerald-50">
                   Your vote for{" "}
-                  <strong>{selectedOption?.label}</strong> is included below.
+                  <strong>{selectedOption?.label}</strong>{" "}
+                  {resultsHidden ? "has been counted." : "is included below."}
                 </p>
               </div>
             </div>
           </div>
         </div>
 
+        {resultsHidden ? (
+          <p className="rounded-2xl border border-black/10 bg-white p-5 text-sm leading-6 text-neutral-600">
+            Results for this poll are not public at the moment.
+          </p>
+        ) : (
         <div className="grid gap-6 xl:grid-cols-2">
           <div className="rounded-[2rem] border border-black/10 bg-white p-6 shadow-xl shadow-black/5 sm:p-8">
             <div className="flex items-center justify-between gap-4">
@@ -258,6 +266,7 @@ export function HouseholdFinanceForm({
             )}
           </div>
         </div>
+        )}
 
         <div className="rounded-2xl border border-black/10 bg-[#f6f1e7] p-5 text-sm leading-6 text-neutral-600">
           Results reflect readers who chose to take part in this Webfit News

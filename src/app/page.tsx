@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BrandHeader } from "@/components/brand-header";
 import { SiteFooter } from "@/components/site-footer";
 import { StatusPill } from "@/components/status-pill";
+import { MONEY_POLLS, MONEY_POLL_SLUGS } from "@/lib/money-polls";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,17 @@ export default async function HomePage() {
     .eq("is_public", true)
     .order("created_at", { ascending: false });
 
-  const featuredPolls = (polls ?? []).filter((poll) => poll.poll_type !== "electorate_party_vote");
+  const featuredPolls = (polls ?? []).filter(
+    (poll) => poll.poll_type !== "electorate_party_vote" && !MONEY_POLL_SLUGS.has(poll.slug),
+  );
+  // Only link money polls that exist and are public, so a link never 404s.
+  const statusBySlug = new Map((polls ?? []).map((poll) => [poll.slug, poll.status as string]));
+  const moneyPolls = MONEY_POLLS.filter((poll) => statusBySlug.has(poll.slug)).map((poll) => ({
+    ...poll,
+    status: statusBySlug.get(poll.slug) ?? "",
+  }));
+  // The general list only shows its empty state when there are no polls at all.
+  const showPollList = featuredPolls.length > 0 || moneyPolls.length === 0;
 
   return (
     <div className="min-h-screen">
@@ -149,6 +160,42 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {moneyPolls.length > 0 && (
+          <section className={`mx-auto max-w-7xl px-5 md:px-8 ${showPollList ? "pt-16" : "py-16"}`}>
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#b88a2a]">
+              Money and banking
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+              Reader polls on banking
+            </h2>
+
+            <div className="mt-9 grid gap-5 md:grid-cols-3">
+              {moneyPolls.map((poll) => (
+                <Link
+                  key={poll.slug}
+                  href={`/polls/${poll.slug}`}
+                  className="luxury-border group flex flex-col rounded-[2rem] bg-white p-7 transition hover:-translate-y-1 hover:shadow-2xl"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
+                      {poll.eyebrow}
+                    </p>
+                    <StatusPill status={poll.status} />
+                  </div>
+                  <h3 className="mt-3 flex-1 text-xl font-semibold leading-7 tracking-tight">
+                    {poll.question}
+                  </h3>
+                  <span className="mt-6 inline-flex items-center gap-2 font-semibold text-[#7b1025]">
+                    {poll.status === "open" ? "Vote now" : "View poll"}
+                    <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {showPollList && (
         <section className="mx-auto max-w-7xl px-5 py-16 md:px-8">
           <div className="mb-9 flex items-end justify-between gap-6">
             <div>
@@ -218,6 +265,7 @@ export default async function HomePage() {
             </div>
           )}
         </section>
+        )}
 
         <section className="border-t border-black/10 bg-[#f0ebe1]">
           <div className="mx-auto max-w-7xl px-5 py-16 md:px-8 md:py-20">

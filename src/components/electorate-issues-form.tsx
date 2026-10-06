@@ -107,6 +107,7 @@ export function ElectorateIssuesForm({
   const [electorateResults, setElectorateResults] = useState<PollResult[]>([]);
   const [nationalResults, setNationalResults] = useState<PollResult[]>([]);
   const [lastUpdated, setLastUpdated] = useState("");
+  const [resultsHidden, setResultsHidden] = useState(false);
 
   const electorateBoxRef = useRef<HTMLDivElement>(null);
 
@@ -205,6 +206,7 @@ export function ElectorateIssuesForm({
         return;
       }
 
+      setResultsHidden(Boolean(result.resultsHidden));
       setElectorateResults(
         Array.isArray(result.electorateResults) ? result.electorateResults : []
       );
@@ -546,7 +548,7 @@ export function ElectorateIssuesForm({
                   Vote recorded
                 </p>
                 <h2 className="mt-2 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
-                  Your local result is live
+                  {resultsHidden ? "Thank you for taking part" : "Your local result is live"}
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
                   Your response for {selectedElectorate} has been counted.
@@ -559,21 +561,29 @@ export function ElectorateIssuesForm({
             </div>
           </div>
 
-          <ResultsPanel
-            eyebrow={selectedElectorate}
-            title="Top issues in your electorate"
-            results={electorateResults}
-            selectedOptionId={selectedOption}
-            emptyText="Your vote may be the first one for this electorate."
-          />
+          {resultsHidden ? (
+            <p className="rounded-2xl border border-black/8 bg-white p-5 text-sm leading-6 text-neutral-600">
+              Results for this poll are not public at the moment.
+            </p>
+          ) : (
+            <>
+              <ResultsPanel
+                eyebrow={selectedElectorate}
+                title="Top issues in your electorate"
+                results={electorateResults}
+                selectedOptionId={selectedOption}
+                emptyText="Your vote may be the first one for this electorate."
+              />
 
-          <ResultsPanel
-            eyebrow="New Zealand"
-            title="Nationwide comparison"
-            results={nationalResults}
-            selectedOptionId={selectedOption}
-            emptyText="National results will appear as votes come in."
-          />
+              <ResultsPanel
+                eyebrow="New Zealand"
+                title="Nationwide comparison"
+                results={nationalResults}
+                selectedOptionId={selectedOption}
+                emptyText="National results will appear as votes come in."
+              />
+            </>
+          )}
 
           <div className="flex flex-col gap-2 rounded-2xl border border-black/8 bg-white p-4 text-xs leading-5 text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
             <p>
