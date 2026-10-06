@@ -564,7 +564,7 @@ export function ElectorateIssuesForm({
             title="Top issues in your electorate"
             results={electorateResults}
             selectedOptionId={selectedOption}
-            emptyText="Your vote may be the first one for this electorate."
+            emptyText="Results for your electorate unlock at 10 votes. Share this poll to help unlock them."
           />
 
           <ResultsPanel
@@ -572,7 +572,7 @@ export function ElectorateIssuesForm({
             title="Nationwide comparison"
             results={nationalResults}
             selectedOptionId={selectedOption}
-            emptyText="National results will appear as votes come in."
+            emptyText="National results unlock at 10 votes."
           />
 
           <div className="flex flex-col gap-2 rounded-2xl border border-black/8 bg-white p-4 text-xs leading-5 text-neutral-500 sm:flex-row sm:items-center sm:justify-between">

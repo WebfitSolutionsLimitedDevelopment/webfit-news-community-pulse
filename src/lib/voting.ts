@@ -37,3 +37,28 @@ export function toPublicResults(
     percentage: Number(row.percentage ?? 0),
   }));
 }
+
+/**
+ * Minimum-vote thresholds before any result is shown publicly.
+ * With very few votes, percentages reveal the totals (100% = 1 vote),
+ * so results stay locked until there's a meaningful base.
+ */
+import { MIN_NATIONAL_VOTES, MIN_POLL_VOTES } from "@/lib/voting-thresholds";
+export { MIN_NATIONAL_VOTES, MIN_POLL_VOTES };
+
+type RawResultRow = {
+  option_id: string;
+  option_label: string;
+  vote_count?: number | string | null;
+  percentage?: number | string | null;
+};
+
+export function totalVotes(rows: Array<{ vote_count?: number | string | null }>) {
+  return rows.reduce((sum, row) => sum + Number(row.vote_count ?? 0), 0);
+}
+
+/** Percentages only, and nothing at all until the poll reaches the threshold. */
+export function gatePublicResults(rows: RawResultRow[], minimum = MIN_POLL_VOTES) {
+  const locked = totalVotes(rows) < minimum;
+  return { locked, results: locked ? [] : toPublicResults(rows) };
+}
