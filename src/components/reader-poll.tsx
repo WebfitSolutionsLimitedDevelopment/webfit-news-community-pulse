@@ -20,6 +20,7 @@ type ReaderPollProps = {
   pollId: string;
   question: string;
   votingOpen: boolean;
+  resultsPublic: boolean;
   options: PollOption[];
 };
 
@@ -62,7 +63,7 @@ async function fetchVoteStatus(pollId: string): Promise<VoteStatus | null> {
  * Single-question reader poll using the shared open-voting route
  * (/api/voting/submit): one vote per browser per poll, percentages only.
  */
-export function ReaderPoll({ pollId, question, votingOpen, options }: ReaderPollProps) {
+export function ReaderPoll({ pollId, question, votingOpen, resultsPublic, options }: ReaderPollProps) {
   const [selectedOptionId, setSelectedOptionId] = useState("");
   const [results, setResults] = useState<PollResult[]>([]);
   const [hasVoted, setHasVoted] = useState(false);
@@ -298,7 +299,8 @@ export function ReaderPoll({ pollId, question, votingOpen, options }: ReaderPoll
           </button>
 
           <p className="mt-4 text-xs leading-5 text-neutral-500">
-            No email or sign-up. This browser can submit one response to this poll. Results are shown after voting.
+            No email or sign-up. This browser can submit one response to this poll.{" "}
+            {resultsPublic ? "Results are shown after voting." : "Results are not public at the moment."}
           </p>
         </form>
       )}

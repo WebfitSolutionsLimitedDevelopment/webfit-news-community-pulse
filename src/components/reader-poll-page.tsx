@@ -22,7 +22,7 @@ export async function ReaderPollPage({ slug }: { slug: string }) {
   const { data: poll, error: pollError } = await supabase
     .from("polls")
     .select(
-      "id, slug, title, question, description, status, hero_title, hero_subtitle, disclaimer, methodology, privacy_notice"
+      "id, slug, title, question, description, status, results_visibility, hero_title, hero_subtitle, disclaimer, methodology, privacy_notice"
     )
     .eq("slug", slug)
     .eq("is_public", true)
@@ -47,6 +47,7 @@ export async function ReaderPollPage({ slug }: { slug: string }) {
 
   const options = (optionData ?? []) as PollOption[];
   const votingOpen = poll.status === "open";
+  const resultsPublic = poll.results_visibility !== "private";
 
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-neutral-950">
@@ -97,7 +98,11 @@ export async function ReaderPollPage({ slug }: { slug: string }) {
                   />
                   <TrustLine
                     icon={<CheckCircle2 size={18} />}
-                    text="Results are shown as percentages after this browser has voted."
+                    text={
+                      resultsPublic
+                        ? "Results are shown as percentages after this browser has voted."
+                        : "Results for this poll are not public at the moment."
+                    }
                   />
                 </div>
               </aside>
@@ -109,6 +114,7 @@ export async function ReaderPollPage({ slug }: { slug: string }) {
           pollId={poll.id}
           question={poll.question || config.question}
           votingOpen={votingOpen}
+          resultsPublic={resultsPublic}
           options={options}
         />
 
