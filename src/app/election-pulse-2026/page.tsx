@@ -255,17 +255,17 @@ export default async function ElectionPulsePage() {
                   Participant results, not an election forecast
                 </span>
               </div>
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="mt-5 flex flex-wrap items-center gap-3">
                 <Link
                   href="/electorates-2026"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#7b1025] px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-[#5c0b1b]"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-[#7b1025] px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-[#5c0b1b]"
                 >
                   Vote now
                   <ArrowRight size={18} />
                 </Link>
                 <Link
                   href="/coalition-2026"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-black/15 bg-white px-6 py-3 text-base font-semibold text-neutral-800 transition hover:border-[#b88a2a]"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-black/15 bg-white px-6 py-3 text-base font-semibold text-neutral-800 transition hover:border-[#b88a2a]"
                 >
                   Who forms the government?
                 </Link>
