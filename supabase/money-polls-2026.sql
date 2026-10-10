@@ -28,16 +28,22 @@ insert into public.poll_options (poll_id, label, display_order, is_active)
 select new_poll.id, o.label, o.display_order, true
 from new_poll
 cross join (values
-    ('ANZ', 1),
-    ('ASB', 2),
-    ('Bank of Baroda NZ', 3),
-    ('BNZ', 4),
-    ('Kiwibank', 5),
-    ('Remitly', 6),
-    ('Western Union', 7),
-    ('Westpac', 8),
-    ('Wise', 9),
-    ('Other', 10)
+  ('ANZ', 1),
+  ('ASB', 2),
+  ('Bank of Baroda NZ', 3),
+  ('Bank of India NZ', 4),
+  ('BNZ', 5),
+  ('Kiwibank', 6),
+  ('OFX', 7),
+  ('OrbitRemit', 8),
+  ('Remitly', 9),
+  ('Ria Money Transfer', 10),
+  ('Western Union', 11),
+  ('Westpac', 12),
+  ('Wise', 13),
+  ('WorldRemit', 14),
+  ('Xe', 15),
+  ('Other', 16)
 ) as o(label, display_order);
 
 -- Which bank do you use for term deposits?
@@ -118,7 +124,7 @@ commit;
 
 -- Check (read-only). Expect one row per poll:
 --   status = open, results_visibility = live, is_public = true,
---   options = 10, 17 and 11, votes = 0.
+--   options = 16, 17 and 11, votes = 0.
 select
   p.slug,
   p.status,
