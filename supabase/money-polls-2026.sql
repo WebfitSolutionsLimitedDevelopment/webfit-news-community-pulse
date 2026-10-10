@@ -107,24 +107,28 @@ insert into public.poll_options (poll_id, label, display_order, is_active)
 select new_poll.id, o.label, o.display_order, true
 from new_poll
 cross join (values
-    ('ANZ', 1),
-    ('ASB', 2),
-    ('Bank of Baroda NZ', 3),
-    ('BNZ', 4),
-    ('Co-operative Bank', 5),
-    ('Kiwibank', 6),
-    ('SBS', 7),
-    ('TSB', 8),
-    ('Westpac', 9),
-    ('Other', 10),
-    ('I don''t have a home loan', 11)
+  ('ANZ', 1),
+  ('ASB', 2),
+  ('Bank of Baroda NZ', 3),
+  ('Bank of China NZ', 4),
+  ('Bank of India NZ', 5),
+  ('BNZ', 6),
+  ('China Construction Bank NZ', 7),
+  ('Co-operative Bank', 8),
+  ('ICBC NZ', 9),
+  ('Kiwibank', 10),
+  ('SBS', 11),
+  ('TSB', 12),
+  ('Westpac', 13),
+  ('Other', 14),
+  ('I don''t have a home loan', 15)
 ) as o(label, display_order);
 
 commit;
 
 -- Check (read-only). Expect one row per poll:
 --   status = open, results_visibility = live, is_public = true,
---   options = 16, 17 and 11, votes = 0.
+--   options = 16, 17 and 15, votes = 0.
 select
   p.slug,
   p.status,
