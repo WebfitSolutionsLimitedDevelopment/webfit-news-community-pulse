@@ -4,7 +4,7 @@ import { Building2, CheckCircle2, LockKeyhole, ShieldCheck } from "lucide-react"
 import { BrandHeader } from "@/components/brand-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ReaderPoll, type PollResult } from "@/components/reader-poll";
-import { getMoneyPoll } from "@/lib/money-polls";
+import { getMoneyPoll, type MoneyPoll } from "@/lib/money-polls";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { toPublicResults } from "@/lib/voting";
@@ -16,9 +16,9 @@ type PollOption = {
   description: string | null;
 };
 
-/** Page shell for a money/banking reader poll, styled like the bank poll page. */
-export async function ReaderPollPage({ slug }: { slug: string }) {
-  const config = getMoneyPoll(slug);
+/** Shared page shell for anonymous, single-question reader polls. */
+export async function ReaderPollPage({ slug, config: providedConfig }: { slug: string; config?: MoneyPoll }) {
+  const config = providedConfig ?? getMoneyPoll(slug);
   const supabase = await createClient();
 
   const { data: poll, error: pollError } = await supabase
