@@ -64,13 +64,20 @@ cross join (values
     ('ANZ', 1),
     ('ASB', 2),
     ('Bank of Baroda NZ', 3),
-    ('BNZ', 4),
-    ('Heartland', 5),
-    ('Kiwibank', 6),
-    ('Rabobank', 7),
-    ('Westpac', 8),
-    ('Other', 9),
-    ('I don''t have a term deposit', 10)
+    ('Bank of China NZ', 4),
+    ('Bank of India NZ', 5),
+    ('BNZ', 6),
+    ('China Construction Bank NZ', 7),
+    ('Heartland', 8),
+    ('ICBC NZ', 9),
+    ('Kiwibank', 10),
+    ('Rabobank', 11),
+    ('SBS Bank', 12),
+    ('The Co-operative Bank', 13),
+    ('TSB', 14),
+    ('Westpac', 15),
+    ('Other', 16),
+    ('I don''t have a term deposit', 17)
 ) as o(label, display_order);
 
 -- Which bank is your home loan with?
@@ -111,7 +118,7 @@ commit;
 
 -- Check (read-only). Expect one row per poll:
 --   status = open, results_visibility = live, is_public = true,
---   options = 10, 10 and 11, votes = 0.
+--   options = 10, 17 and 11, votes = 0.
 select
   p.slug,
   p.status,
