@@ -101,3 +101,12 @@ Public URL after setup:
 `https://poll.webfitnews.co.nz/polls/luxon-leadership-pulse-2026`
 
 This mode collects no email address and sends no OTP. It uses a pseudonymous browser cookie plus hashed technical signals for basic repeat-vote and rate-limit controls. It is intentionally labelled as an open reader pulse, not a scientific or representative election poll.
+
+## Complete term-deposit bank options
+
+For a new database, run `supabase/money-polls-2026.sql`.
+For the existing live poll, run `supabase/expand-term-deposit-options-2026.sql`
+in Supabase SQL Editor after deployment. GitHub/Vercel deployment does not apply
+this database script automatically. It adds the missing banks and orders all
+17 options while preserving existing option IDs and votes. The script is safe
+to re-run and includes a verification query.
