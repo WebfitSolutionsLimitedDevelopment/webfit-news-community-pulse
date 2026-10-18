@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, BarChart3, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { SiteFooter } from "@/components/site-footer";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -19,7 +19,6 @@ type Summary = {
   poll_status: string;
   options: Option[] | null;
 };
-const MIN_SAMPLE = 10;
 
 export default async function ElectorateSpotlight({
   params,
@@ -42,15 +41,6 @@ export default async function ElectorateSpotlight({
     .filter((option) => Number.isFinite(option.count) && option.count >= 0)
     .sort((a, b) => b.count - a.count);
   const total = options.reduce((sum, option) => sum + option.count, 0);
-  const enoughData = total >= MIN_SAMPLE;
-  const electorateCount = rows.filter((item) =>
-    (item.options ?? []).some((option) => Number(option.vote_count || 0) > 0),
-  ).length;
-  const allResponses = rows.reduce(
-    (sum, item) => sum + (item.options ?? []).reduce(
-      (subtotal, option) => subtotal + Number(option.vote_count || 0), 0,
-    ), 0,
-  );
 
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-neutral-950">
@@ -72,29 +62,9 @@ export default async function ElectorateSpotlight({
               <p className="mt-8 rounded-xl bg-red-50 p-5 text-red-900">Results are temporarily unavailable. Please try again later.</p>
             ) : (
               <>
-                <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-[#f7f4ed] p-5">
-                    <Users className="text-[#7b1025]" size={20} />
-                    <p className="mt-3 text-3xl font-semibold tabular-nums">{total.toLocaleString("en-NZ")}</p>
-                    <p className="text-sm text-neutral-600">Reader responses here</p>
-                  </div>
-                  <div className="rounded-2xl bg-[#f7f4ed] p-5">
-                    <BarChart3 className="text-[#7b1025]" size={20} />
-                    <p className="mt-3 text-3xl font-semibold tabular-nums">{electorateCount}</p>
-                    <p className="text-sm text-neutral-600">Electorates with responses</p>
-                  </div>
-                  <div className="rounded-2xl bg-[#f7f4ed] p-5">
-                    <Users className="text-[#7b1025]" size={20} />
-                    <p className="mt-3 text-3xl font-semibold tabular-nums">{allResponses.toLocaleString("en-NZ")}</p>
-                    <p className="text-sm text-neutral-600">Responses across electorates</p>
-                  </div>
-                </div>
-                <h2 className="mt-10 text-2xl font-semibold">Local reader preferences</h2>
-                {!enoughData ? (
-                  <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
-                    {total === 0 ? "No reader responses yet." : "There are not yet enough responses to show percentages responsibly."}
-                    {" "}Party percentages appear after at least {MIN_SAMPLE} responses.
-                  </p>
+                <h2 className="mt-9 text-2xl font-semibold">Local reader preferences</h2>
+                {total === 0 ? (
+                  <p className="mt-4 rounded-xl bg-[#f7f4ed] p-5 text-sm text-neutral-600">Results will appear when readers participate in this electorate.</p>
                 ) : (
                   <div className="mt-6 space-y-5">
                     {options.filter((option) => option.count > 0).map((option) => {
@@ -103,7 +73,7 @@ export default async function ElectorateSpotlight({
                         <div key={option.label}>
                           <div className="mb-2 flex items-center justify-between gap-3 text-sm">
                             <span className="font-semibold">{option.label}</span>
-                            <span className="tabular-nums text-neutral-600">{option.count} votes · {share.toFixed(1)}%</span>
+                            <span className="tabular-nums text-neutral-600">{share.toFixed(1)}%</span>
                           </div>
                           <div className="h-3 overflow-hidden rounded-full bg-neutral-100">
                             <div className="h-full rounded-full bg-[#7b1025]" style={{ width: `${share}%` }} />
@@ -111,6 +81,7 @@ export default async function ElectorateSpotlight({
                         </div>
                       );
                     })}
+                    <p className="rounded-xl bg-[#f7f4ed] p-4 text-xs leading-6 text-neutral-600">Percentages describe only the readers who chose to participate. Results may change substantially with additional responses, especially where participation is limited.</p>
                   </div>
                 )}
                 <div className="mt-9 flex flex-wrap gap-3">
@@ -126,7 +97,7 @@ export default async function ElectorateSpotlight({
           </div>
         </section>
         <p className="mt-6 text-xs leading-6 text-neutral-500">
-          Counts are aggregated from the existing electorate poll results. These are self-selected reader responses,
+          Percentages are calculated from the existing electorate poll results. These are self-selected reader responses,
           not verified electorate turnout, a scientific poll, a seat projection or an election prediction.
         </p>
       </main>
