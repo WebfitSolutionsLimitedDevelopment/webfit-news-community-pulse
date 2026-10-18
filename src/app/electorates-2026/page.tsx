@@ -72,6 +72,17 @@ export default async function ElectoratesPage() {
           </Link>
         </section>
 
+        <section className="mt-8 rounded-[1.5rem] border border-[#b88a2a]/30 bg-white p-6 sm:flex sm:items-center sm:justify-between sm:gap-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">New: Electorate Spotlight</p>
+            <h2 className="mt-2 text-xl font-semibold">Explore local reader responses</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-600">See participation counts and local party preferences across electorate polls.</p>
+          </div>
+          <Link href="/electorate-spotlight-2026" className="mt-4 inline-flex shrink-0 font-semibold text-[#7b1025] sm:mt-0">
+            Explore electorates →
+          </Link>
+        </section>
+
         <section className="mt-8">
           {error ? (
             <div className="rounded-[1.5rem] border border-red-200 bg-red-50 p-7 text-red-950">
