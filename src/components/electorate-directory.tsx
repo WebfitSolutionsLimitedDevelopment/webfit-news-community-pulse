@@ -74,9 +74,8 @@ export function ElectorateDirectory({ items }: { items: ElectorateDirectoryItem[
       ) : (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => (
-            <Link
+            <div
               key={item.id}
-              href={`/polls/${item.slug}`}
               className="group flex min-h-32 flex-col justify-between rounded-[1.5rem] border border-black/10 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#b88a2a]/60 hover:shadow-lg"
             >
               <div className="flex items-start justify-between gap-3">
@@ -90,11 +89,15 @@ export function ElectorateDirectory({ items }: { items: ElectorateDirectoryItem[
                   {item.status}
                 </span>
               </div>
-              <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#7b1025]">
-                Open party vote poll
-                <ArrowRight size={16} className="transition group-hover:translate-x-1" />
-              </span>
-            </Link>
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <Link href={`/polls/${item.slug}`} className="inline-flex items-center gap-2 text-sm font-semibold text-[#7b1025]">
+                  Open party vote poll <ArrowRight size={16} />
+                </Link>
+                <Link href={`/electorate-spotlight/${item.slug}`} className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-700 underline underline-offset-4">
+                  Explore local results
+                </Link>
+              </div>
+            </div>
           ))}
         </div>
       )}
