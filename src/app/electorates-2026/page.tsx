@@ -72,6 +72,14 @@ export default async function ElectoratesPage() {
           </Link>
         </section>
 
+        <section className="mt-8 rounded-[1.5rem] border border-[#b88a2a]/30 bg-white p-6 sm:flex sm:items-center sm:justify-between sm:gap-5">
+          <div>
+            <h2 className="text-xl font-semibold">Compare two electorates</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-600">Explore local reader party preferences side by side, shown as percentages.</p>
+          </div>
+          <Link href="/electorate-compare" className="mt-4 inline-flex shrink-0 items-center rounded-xl bg-[#7b1025] px-5 py-3 text-sm font-semibold text-white sm:mt-0">Compare electorates</Link>
+        </section>
+
         <section className="mt-8">
           {error ? (
             <div className="rounded-[1.5rem] border border-red-200 bg-red-50 p-7 text-red-950">
