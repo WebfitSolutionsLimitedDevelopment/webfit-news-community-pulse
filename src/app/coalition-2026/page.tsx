@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Crown, Scale, Users } from "lucide-react";
+import { ArrowRight, Scale, Users } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
 import { PartyLogo } from "@/components/party-logo";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Coalition Pulse 2026 | Webfit News",
   description:
-    "Who would form the government? Live coalition picture from Webfit News Election Pulse reader votes.",
+    "Explore current government and opposition bloc preferences among voluntary Webfit News Election Pulse readers.",
 };
 
 type SummaryOption = {
@@ -139,7 +139,7 @@ async function loadParties(): Promise<{ parties: Party[]; error: boolean }> {
 
 const BLOC_ORDER: BlocKey[] = ["government", "other", "opposition"];
 
-/** Half-donut "Parliament" arc: government on the left, opposition on the right, 50% at the top. */
+/** Half-donut of participating reader-vote shares, not parliamentary seats. */
 function MajorityArc({ shares }: { shares: Record<BlocKey, number> }) {
   // Semicircle from left (180°) to right (0°); pathLength=100 lets dash values be percentages.
   const arc = "M 20 120 A 100 100 0 0 1 220 120";
@@ -166,10 +166,8 @@ function MajorityArc({ shares }: { shares: Record<BlocKey, number> }) {
           />
         );
       })}
-      {/* 50% majority marker at the top of the arc */}
-      <line x1="120" y1="0" x2="120" y2="40" stroke="#171717" strokeWidth="2.5" />
-      <text x="120" y="112" textAnchor="middle" fontSize="11" fontWeight="700" fill="#525252" letterSpacing="1.5">
-        50% TO GOVERN
+      <text x="120" y="112" textAnchor="middle" fontSize="10" fontWeight="700" fill="#525252" letterSpacing="0.8">
+        READER VOTE SHARE
       </text>
     </svg>
   );
@@ -187,60 +185,19 @@ export default async function CoalitionPage() {
   };
   const gov = shares.government;
   const opp = shares.opposition;
-  const others = parties.filter((p) => p.bloc === "other");
   const topShare = parties.reduce((max, p) => Math.max(max, p.share), 0);
 
-  // Kingmaker: an outside party that would push a bloc past 50% on its own.
-  const kingmakers =
-    gov <= 50 && opp <= 50
-      ? others.filter((p) => gov + p.share > 50 || opp + p.share > 50)
-      : [];
+  const gap = Math.abs(gov - opp);
+  const leader = gov > opp ? "government" : opp > gov ? "opposition" : null;
+  const verdict = parties.length === 0
+    ? { eyebrow: "Waiting for responses", title: "No reader votes yet", share: null as number | null, detail: "Results will appear when readers participate.", colour: "#404040" }
+    : leader === "government"
+      ? { eyebrow: "Current reader-poll picture", title: "Government bloc leads", share: gov as number | null, detail: `Ahead of the opposition bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.government.colour }
+      : leader === "opposition"
+        ? { eyebrow: "Current reader-poll picture", title: "Opposition bloc leads", share: opp as number | null, detail: `Ahead of the government bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.opposition.colour }
+        : { eyebrow: "Current reader-poll picture", title: "Blocs neck and neck", share: gov as number | null, detail: "Government and opposition blocs have equal shares among participating readers.", colour: "#6b5417" };
 
-  let verdict: { eyebrow: string; title: string; share: number | null; detail: string; colour: string };
-  if (parties.length === 0) {
-    verdict = {
-      eyebrow: "Waiting for votes",
-      title: "No votes yet",
-      share: null,
-      detail: "The coalition picture appears as soon as readers start voting.",
-      colour: "#404040",
-    };
-  } else if (gov > 50) {
-    verdict = {
-      eyebrow: "Current picture",
-      title: "Government returned",
-      share: gov,
-      detail: "National, ACT and NZ First would hold a majority on their own.",
-      colour: BLOC_META.government.colour,
-    };
-  } else if (opp > 50) {
-    verdict = {
-      eyebrow: "Current picture",
-      title: "Change of government",
-      share: opp,
-      detail: "Labour, the Greens and Te Pāti Māori would hold a majority on their own.",
-      colour: BLOC_META.opposition.colour,
-    };
-  } else {
-    const govAhead = gov >= opp;
-    verdict = {
-      eyebrow: "Current picture",
-      title: "Hung parliament",
-      share: null,
-      detail:
-        gov === opp
-          ? "The blocs are tied. Smaller parties decide who governs."
-          : `${govAhead ? "The current government" : "The opposition"} is ahead on ${fmt(Math.max(gov, opp))}, but needs support from outside its bloc.`,
-      // Darker than BLOC_META.other.colour so white hero text stays above 4.5:1.
-      colour: "#6b5417",
-    };
-  }
-
-  const lastUpdated = new Intl.DateTimeFormat("en-NZ", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Pacific/Auckland",
-  }).format(new Date());
+  const lastUpdated = new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium", timeStyle: "short", timeZone: "Pacific/Auckland" }).format(new Date());
 
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-neutral-950">
@@ -251,10 +208,10 @@ export default async function CoalitionPage() {
           Webfit News Coalition Pulse 2026
         </p>
         <h1 className="mt-3 text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">
-          Who would form the government?
+          How are the blocs tracking?
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-neutral-600 sm:text-lg">
-          Live from Election Pulse reader votes, grouped the way Parliament lines up today.
+          Current party preferences from voluntary Webfit News Election Pulse readers, grouped by the parties in each bloc. This is not a parliamentary seat projection.
         </p>
 
         {error ? (
@@ -291,13 +248,13 @@ export default async function CoalitionPage() {
                     >
                       Vote now <ArrowRight size={18} />
                     </Link>
-                    <span className="text-xs text-white/85">Updated {lastUpdated}</span>
+                    <span className="text-xs text-white/85">Viewed {lastUpdated} NZ time · live totals, not a recorded snapshot</span>
                   </div>
                 </div>
 
                 <div className="p-6 sm:p-9">
                   <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-neutral-500">
-                    Race to a majority
+                    Share of participating reader votes
                   </p>
                   <div className="mt-4">
                     <MajorityArc shares={shares} />
@@ -319,33 +276,26 @@ export default async function CoalitionPage() {
               </div>
             </section>
 
-            {/* Kingmakers */}
-            {kingmakers.length > 0 && (
-              <section className="mt-6 rounded-[2rem] border border-[#b88a2a]/40 bg-[#fbf8f1] p-6 sm:p-8">
-                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9d741f]">
-                  <Crown size={16} /> Kingmaker
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold">
-                  {kingmakers.length === 1 ? "One party holds the balance" : "These parties hold the balance"}
-                </h2>
-                <div className="mt-5 grid gap-3 md:grid-cols-2">
-                  {kingmakers.map((p) => {
-                    const withGov = gov + p.share > 50;
-                    const withOpp = opp + p.share > 50;
-                    return (
-                      <div key={p.key} className="flex items-center gap-4 rounded-2xl border border-black/10 bg-white p-4">
-                        <PartyLogo partyKey={p.key} label={p.label} logoUrl={p.logoUrl} />
-                        <div className="min-w-0">
-                          <p className="font-semibold">{p.label} · {fmt(p.share)}</p>
-                          <p className="text-sm leading-6 text-neutral-600">
-                            Could give a majority to{" "}
-                            {withGov && withOpp ? "either side" : withGov ? "the current government" : "the opposition"}.
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+            {parties.length > 0 && (
+              <section className="mt-6 rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-sm sm:p-7" aria-label="Coalition bloc comparison">
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <h2 className="text-xl font-semibold">Government vs opposition</h2>
+                  <p className="text-sm font-semibold text-neutral-700">{leader ? `${gap.toFixed(1)} percentage-point gap` : "Blocs tied"}</p>
                 </div>
+                <div className="mt-5 flex h-5 w-full overflow-hidden rounded-full bg-neutral-100" role="img" aria-label={`Government ${fmt(gov)}, opposition ${fmt(opp)}, other parties ${fmt(shares.other)}`}>
+                  {(["government", "opposition", "other"] as BlocKey[]).map((bloc) => (
+                    <div key={bloc} style={{ width: `${shares[bloc]}%`, background: BLOC_META[bloc].colour }} />
+                  ))}
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center sm:text-left">
+                  {(["government", "opposition", "other"] as BlocKey[]).map((bloc) => (
+                    <div key={bloc} className="min-w-0">
+                      <p className="text-xs text-neutral-600">{BLOC_META[bloc].name}</p>
+                      <p className="text-lg font-bold tabular-nums sm:text-2xl" style={{ color: BLOC_META[bloc].colour }}>{fmt(shares[bloc])}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 text-xs leading-5 text-neutral-500">These are reader-vote percentages, not parliamentary seats or an election outcome. Movement arrows will be added only after verified historical snapshots are available.</p>
               </section>
             )}
 
@@ -355,12 +305,9 @@ export default async function CoalitionPage() {
                 {(["government", "opposition", "other"] as BlocKey[]).map((bloc) => {
                   const list = parties.filter((p) => p.bloc === bloc);
                   const share = shares[bloc];
-                  const status =
-                    bloc === "other"
-                      ? "Outside both blocs"
-                      : share > 50
-                        ? "Majority on its own"
-                        : `${fmt(50 - share)} short of a majority`;
+                  const status = bloc === "other"
+                    ? "Outside the two blocs"
+                    : share >= 50 ? "Over 50% of participating reader votes" : "Under 50% of participating reader votes";
                   return (
                     <div key={bloc} className="overflow-hidden rounded-[1.75rem] border border-black/10 bg-white shadow-sm">
                       <div className="h-1.5" style={{ background: BLOC_META[bloc].colour }} />
@@ -433,7 +380,7 @@ export default async function CoalitionPage() {
           <strong className="text-neutral-700">How this works:</strong>{" "}shares are each party&apos;s
           percentage of reader votes across all electorate polls, leaving out &ldquo;undecided&rdquo; and
           &ldquo;prefer not to say&rdquo;, grouped by today&apos;s line-up in Parliament. It does not convert
-          votes into seats, apply the 5% threshold or count electorate wins. Voluntary Webfit News reader
+          votes into seats, apply the 5% threshold or count electorate wins. Figures are recalculated when the page loads; the view time is not a vote timestamp. Voluntary Webfit News reader
           results, not a scientific poll or an election forecast.
         </p>
       </main>
