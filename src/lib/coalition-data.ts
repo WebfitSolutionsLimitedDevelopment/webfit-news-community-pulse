@@ -90,11 +90,40 @@ export function blocOf(key: string): BlocKey {
   return GOVERNMENT_PARTIES.has(key) ? "government" : OPPOSITION_PARTIES.has(key) ? "opposition" : "other";
 }
 
+/** Lower-case, strip macrons/accents, and join words with "_" (e.g. "Te Pāti Māori" -> "te_pati_maori"). */
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+// Spellings seen in poll options that refer to the same party.
+const KEY_ALIASES: Record<string, string> = {
+  te_p_ti_m_ori: "te_pati_maori",
+  maori_party: "te_pati_maori",
+  the_maori_party: "te_pati_maori",
+  green_party: "the_green_party_of_aotearoa_new_zealand",
+  green_party_of_aotearoa_new_zealand: "the_green_party_of_aotearoa_new_zealand",
+  new_zealand_national_party: "the_new_zealand_national_party",
+  national_party: "the_new_zealand_national_party",
+  labour_party: "new_zealand_labour_party",
+  act: "act_new_zealand",
+  nz_first: "new_zealand_first_party",
+  new_zealand_first: "new_zealand_first_party",
+};
+
 function partyKey(option: Pick<SummaryOption, "party_key" | "option_label">) {
-  return (
-    option.party_key ||
-    option.option_label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")
-  );
+  const raw = slugify(option.party_key || option.option_label);
+  if (KEY_ALIASES[raw]) return KEY_ALIASES[raw];
+  // Fall back to the label when the stored key isn't one we recognise.
+  const fromLabel = slugify(option.option_label);
+  if (!SHORT_NAMES[raw] && !NOT_DECIDED.has(raw) && (SHORT_NAMES[fromLabel] || KEY_ALIASES[fromLabel])) {
+    return KEY_ALIASES[fromLabel] ?? fromLabel;
+  }
+  return raw;
 }
 
 const nzDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland" });
