@@ -185,7 +185,6 @@ export default async function CoalitionPage() {
   };
   const gov = shares.government;
   const opp = shares.opposition;
-  const others = parties.filter((p) => p.bloc === "other");
   const topShare = parties.reduce((max, p) => Math.max(max, p.share), 0);
 
   const gap = Math.abs(gov - opp);
@@ -197,6 +196,8 @@ export default async function CoalitionPage() {
       : leader === "opposition"
         ? { eyebrow: "Current reader-poll picture", title: "Opposition bloc leads", share: opp as number | null, detail: `Ahead of the government bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.opposition.colour }
         : { eyebrow: "Current reader-poll picture", title: "Blocs neck and neck", share: gov as number | null, detail: "Government and opposition blocs have equal shares among participating readers.", colour: "#6b5417" };
+
+  const lastUpdated = new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium", timeStyle: "short", timeZone: "Pacific/Auckland" }).format(new Date());
 
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-neutral-950">
