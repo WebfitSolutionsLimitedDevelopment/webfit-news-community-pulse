@@ -4,7 +4,15 @@ import { BrandHeader } from "@/components/brand-header";
 import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
 import { PartyLogo } from "@/components/party-logo";
 import { SiteFooter } from "@/components/site-footer";
-import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  BLOC_META,
+  ClosestContests,
+  ElectorateMap,
+  MomentumChart,
+  PathsToMajority,
+  fmt,
+} from "@/components/coalition-charts";
+import { loadCoalitionData, pathsToMajority, type BlocKey } from "@/lib/coalition-data";
 
 export const dynamic = "force-dynamic";
 
@@ -13,129 +21,6 @@ export const metadata = {
   description:
     "Explore current government and opposition bloc preferences among voluntary Webfit News Election Pulse readers.",
 };
-
-type SummaryOption = {
-  party_key: string | null;
-  option_label: string;
-  short_label: string | null;
-  logo_url: string | null;
-  vote_count: number | string;
-};
-
-type SummaryRow = { options: SummaryOption[] | null };
-
-type BlocKey = "government" | "opposition" | "other";
-
-type Party = {
-  key: string;
-  label: string;
-  logoUrl: string | null;
-  share: number; // % of decided votes
-  bloc: BlocKey;
-};
-
-// Current coalition blocs. Edit here if the line-up changes.
-const GOVERNMENT_PARTIES = new Set([
-  "the_new_zealand_national_party",
-  "act_new_zealand",
-  "new_zealand_first_party",
-]);
-const OPPOSITION_PARTIES = new Set([
-  "new_zealand_labour_party",
-  "the_green_party_of_aotearoa_new_zealand",
-  "te_pati_maori",
-]);
-// Not a party choice, so excluded from the shares.
-const NOT_DECIDED = new Set(["undecided", "prefer_not_to_say"]);
-
-const SHORT_NAMES: Record<string, string> = {
-  act_new_zealand: "ACT",
-  new_zealand_first_party: "NZ First",
-  new_zealand_labour_party: "Labour",
-  the_green_party_of_aotearoa_new_zealand: "Green",
-  the_new_zealand_national_party: "National",
-  te_pati_maori: "Te Pāti Māori",
-  opportunity_party: "Opportunity",
-  conservative_party_nz: "Conservative",
-  vision_new_zealand: "Vision NZ",
-  new_zealand_outdoors_freedom_party: "Outdoors & Freedom",
-  aotearoa_legalise_cannabis_party: "Cannabis Party",
-  animal_justice_party_aotearoa_new_zealand: "Animal Justice",
-  womens_rights_party: "Women's Rights",
-  another_registered_party: "Another party",
-};
-
-const BLOC_META: Record<BlocKey, { name: string; parties: string; colour: string; soft: string }> = {
-  government: {
-    name: "Current government",
-    parties: "National · ACT · NZ First",
-    colour: "#1f4e8c",
-    soft: "#eaf0f8",
-  },
-  opposition: {
-    name: "Opposition",
-    parties: "Labour · Green · Te Pāti Māori",
-    colour: "#b3202a",
-    soft: "#f9eaeb",
-  },
-  other: {
-    name: "Other parties",
-    parties: "Not in either bloc",
-    colour: "#8a6d1f",
-    soft: "#f7f1e2",
-  },
-};
-
-function partyKey(option: SummaryOption) {
-  return (
-    option.party_key ||
-    option.option_label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")
-  );
-}
-
-function fmt(value: number) {
-  return `${value.toFixed(1)}%`;
-}
-
-async function loadParties(): Promise<{ parties: Party[]; error: boolean }> {
-  // Service-role client: the summary includes raw counts, which never leave the server.
-  const admin = createAdminClient();
-  const { data, error } = await admin.rpc("get_electorate_party_vote_summary");
-  if (error) return { parties: [], error: true };
-
-  const totals = new Map<string, { label: string; logoUrl: string | null; votes: number }>();
-  for (const row of (Array.isArray(data) ? data : []) as SummaryRow[]) {
-    for (const option of row.options ?? []) {
-      const key = partyKey(option);
-      if (NOT_DECIDED.has(key)) continue;
-      const current = totals.get(key) ?? {
-        label: option.short_label || SHORT_NAMES[key] || option.option_label,
-        logoUrl: option.logo_url,
-        votes: 0,
-      };
-      current.votes += Number(option.vote_count || 0);
-      totals.set(key, current);
-    }
-  }
-
-  const decided = Array.from(totals.values()).reduce((sum, p) => sum + p.votes, 0);
-  const parties = Array.from(totals.entries())
-    .map(([key, p]) => ({
-      key,
-      label: SHORT_NAMES[key] || p.label,
-      logoUrl: p.logoUrl,
-      share: decided > 0 ? (p.votes / decided) * 100 : 0,
-      bloc: (GOVERNMENT_PARTIES.has(key)
-        ? "government"
-        : OPPOSITION_PARTIES.has(key)
-          ? "opposition"
-          : "other") as BlocKey,
-    }))
-    .filter((p) => p.share > 0)
-    .sort((a, b) => b.share - a.share);
-
-  return { parties, error: false };
-}
 
 const BLOC_ORDER: BlocKey[] = ["government", "other", "opposition"];
 
@@ -174,7 +59,8 @@ function MajorityArc({ shares }: { shares: Record<BlocKey, number> }) {
 }
 
 export default async function CoalitionPage() {
-  const { parties, error } = await loadParties();
+  const { parties, electorates, trend, error } = await loadCoalitionData();
+  const paths = pathsToMajority(parties);
 
   const blocShare = (bloc: BlocKey) =>
     parties.filter((p) => p.bloc === bloc).reduce((sum, p) => sum + p.share, 0);
@@ -192,10 +78,10 @@ export default async function CoalitionPage() {
   const verdict = parties.length === 0
     ? { eyebrow: "Waiting for responses", title: "No reader votes yet", share: null as number | null, detail: "Results will appear when readers participate.", colour: "#404040" }
     : leader === "government"
-      ? { eyebrow: "Current reader-poll picture", title: "Government bloc leads", share: gov as number | null, detail: `Ahead of the opposition bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.government.colour }
+      ? { eyebrow: "Current reader-poll picture", title: "Government bloc leads", share: gov as number | null, detail: `Ahead of the opposition bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.government.heroColour }
       : leader === "opposition"
-        ? { eyebrow: "Current reader-poll picture", title: "Opposition bloc leads", share: opp as number | null, detail: `Ahead of the government bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.opposition.colour }
-        : { eyebrow: "Current reader-poll picture", title: "Blocs neck and neck", share: gov as number | null, detail: "Government and opposition blocs have equal shares among participating readers.", colour: "#6b5417" };
+        ? { eyebrow: "Current reader-poll picture", title: "Opposition bloc leads", share: opp as number | null, detail: `Ahead of the government bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.opposition.heroColour }
+        : { eyebrow: "Current reader-poll picture", title: "Blocs neck and neck", share: gov as number | null, detail: "Government and opposition blocs have equal shares among participating readers.", colour: BLOC_META.other.heroColour };
 
   const lastUpdated = new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium", timeStyle: "short", timeZone: "Pacific/Auckland" }).format(new Date());
 
@@ -266,7 +152,7 @@ export default async function CoalitionPage() {
                         <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-500">
                           {bloc === "government" ? "Government" : bloc === "opposition" ? "Opposition" : "Others"}
                         </p>
-                        <p className="text-xl font-semibold sm:text-2xl" style={{ color: BLOC_META[bloc].colour }}>
+                        <p className="text-xl font-semibold tabular-nums text-neutral-900 sm:text-2xl">
                           {fmt(shares[bloc])}
                         </p>
                       </li>
@@ -282,7 +168,7 @@ export default async function CoalitionPage() {
                   <h2 className="text-xl font-semibold">Government vs opposition</h2>
                   <p className="text-sm font-semibold text-neutral-700">{leader ? `${gap.toFixed(1)} percentage-point gap` : "Blocs tied"}</p>
                 </div>
-                <div className="mt-5 flex h-5 w-full overflow-hidden rounded-full bg-neutral-100" role="img" aria-label={`Government ${fmt(gov)}, opposition ${fmt(opp)}, other parties ${fmt(shares.other)}`}>
+                <div className="mt-5 flex h-5 w-full gap-[2px] overflow-hidden rounded-full bg-neutral-100" role="img" aria-label={`Government ${fmt(gov)}, opposition ${fmt(opp)}, other parties ${fmt(shares.other)}`}>
                   {(["government", "opposition", "other"] as BlocKey[]).map((bloc) => (
                     <div key={bloc} style={{ width: `${shares[bloc]}%`, background: BLOC_META[bloc].colour }} />
                   ))}
@@ -291,11 +177,56 @@ export default async function CoalitionPage() {
                   {(["government", "opposition", "other"] as BlocKey[]).map((bloc) => (
                     <div key={bloc} className="min-w-0">
                       <p className="text-xs text-neutral-600">{BLOC_META[bloc].name}</p>
-                      <p className="text-lg font-bold tabular-nums sm:text-2xl" style={{ color: BLOC_META[bloc].colour }}>{fmt(shares[bloc])}</p>
+                      <p className="flex items-center justify-center gap-1.5 text-lg font-bold tabular-nums text-neutral-900 sm:justify-start sm:text-2xl"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: BLOC_META[bloc].colour }} />{fmt(shares[bloc])}</p>
                     </div>
                   ))}
                 </div>
-                <p className="mt-4 text-xs leading-5 text-neutral-500">These are reader-vote percentages, not parliamentary seats or an election outcome. Movement arrows will be added only after verified historical snapshots are available.</p>
+                <p className="mt-4 text-xs leading-5 text-neutral-500">These are reader-vote percentages, not parliamentary seats or an election outcome.</p>
+              </section>
+            )}
+
+            {parties.length > 0 && (
+              <section className="mt-6 rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-sm sm:p-7" aria-label="How the race has moved">
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <h2 className="text-xl font-semibold">How the race has moved</h2>
+                  <p className="text-xs text-neutral-500">Running share of reader votes at the end of each day (NZ time) · dashed line = 50%</p>
+                </div>
+                {trend.length >= 2 ? (
+                  <div className="mt-4">
+                    <div className="sm:hidden"><MomentumChart trend={trend} compact /></div>
+                    <div className="hidden sm:block"><MomentumChart trend={trend} /></div>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm text-neutral-500">The trend line appears once there are votes on at least two different days.</p>
+                )}
+              </section>
+            )}
+
+            {parties.length > 0 && (
+              <section className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+                <div className="rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-sm sm:p-7" aria-label="Electorate map">
+                  <h2 className="text-xl font-semibold">Who leads where</h2>
+                  <p className="mt-1 text-sm text-neutral-600">Every electorate, grouped by which bloc is ahead among its readers. Tap one to see its results.</p>
+                  <div className="mt-5">
+                    <ElectorateMap electorates={electorates} />
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  <div className="rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-sm sm:p-7" aria-label="Paths to a majority">
+                    <h2 className="text-xl font-semibold">Paths to 50%</h2>
+                    <p className="mt-1 text-sm text-neutral-600">The smallest groups of parties that together pass half of reader votes.</p>
+                    <div className="mt-3">
+                      <PathsToMajority paths={paths} />
+                    </div>
+                  </div>
+                  <div className="rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-sm sm:p-7" aria-label="Closest contests">
+                    <h2 className="text-xl font-semibold">Closest contests</h2>
+                    <p className="mt-1 text-sm text-neutral-600">Electorates where the two blocs are nearest to level.</p>
+                    <div className="mt-4">
+                      <ClosestContests electorates={electorates} />
+                    </div>
+                  </div>
+                </div>
               </section>
             )}
 
@@ -317,13 +248,13 @@ export default async function CoalitionPage() {
                             <h3 className="font-semibold">{BLOC_META[bloc].name}</h3>
                             <p className="mt-0.5 text-xs text-neutral-500">{BLOC_META[bloc].parties}</p>
                           </div>
-                          <p className="text-3xl font-semibold tracking-tight" style={{ color: BLOC_META[bloc].colour }}>
+                          <p className="text-3xl font-semibold tracking-tight tabular-nums text-neutral-900">
                             {fmt(share)}
                           </p>
                         </div>
                         <p
                           className="mt-3 inline-block rounded-full px-3 py-1 text-xs font-semibold"
-                          style={{ background: BLOC_META[bloc].soft, color: BLOC_META[bloc].colour }}
+                          style={{ background: BLOC_META[bloc].soft, color: BLOC_META[bloc].heroColour }}
                         >
                           {status}
                         </p>
