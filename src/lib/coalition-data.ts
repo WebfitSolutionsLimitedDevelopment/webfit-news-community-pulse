@@ -230,10 +230,12 @@ export async function loadCoalitionData(): Promise<CoalitionData> {
     loadTrend(admin, pollIds, optionKey),
     pollIds.length
       ? admin.from("polls").select("id", { count: "exact", head: true }).in("id", pollIds).eq("status", "open")
-      : Promise.resolve({ count: 0 }),
+      : Promise.resolve({ count: 0, error: null }),
   ]);
+  // If the status check fails we can't confirm closure, so keep treating voting as open.
+  const votingOpen = openPolls.error ? true : (openPolls.count ?? 0) > 0;
 
-  return { parties, electorates, trend, votingOpen: (openPolls.count ?? 0) > 0, error: false };
+  return { parties, electorates, trend, votingOpen, error: false };
 }
 
 /**

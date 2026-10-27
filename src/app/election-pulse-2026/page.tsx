@@ -256,7 +256,8 @@ export default async function ElectionPulsePage() {
                 </span>
               </div>
               <div className="mt-5 flex flex-wrap items-center gap-3">
-                {activeElectorates > 0 ? (
+                {/* Only say voting has closed once the summary loaded and shows no open polls. */}
+                {error || activeElectorates > 0 ? (
                   <Link
                     href="/electorates-2026"
                     className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-[#7b1025] px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-[#5c0b1b]"
