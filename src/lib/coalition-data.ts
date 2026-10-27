@@ -83,6 +83,8 @@ export type CoalitionData = {
   parties: Party[];
   electorates: ElectorateLean[];
   trend: TrendPoint[];
+  /** True while at least one electorate poll is still open for voting. */
+  votingOpen: boolean;
   error: boolean;
 };
 
@@ -171,7 +173,7 @@ async function loadTrend(
 export async function loadCoalitionData(): Promise<CoalitionData> {
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("get_electorate_party_vote_summary");
-  if (error) return { parties: [], electorates: [], trend: [], error: true };
+  if (error) return { parties: [], electorates: [], trend: [], votingOpen: false, error: true };
 
   const rows = (Array.isArray(data) ? data : []) as SummaryRow[];
   const totals = new Map<string, { label: string; logoUrl: string | null; votes: number }>();
@@ -223,9 +225,15 @@ export async function loadCoalitionData(): Promise<CoalitionData> {
     .filter((p) => p.share > 0)
     .sort((a, b) => b.share - a.share);
 
-  const trend = await loadTrend(admin, rows.map((r) => r.poll_id), optionKey);
+  const pollIds = rows.map((r) => r.poll_id);
+  const [trend, openPolls] = await Promise.all([
+    loadTrend(admin, pollIds, optionKey),
+    pollIds.length
+      ? admin.from("polls").select("id", { count: "exact", head: true }).in("id", pollIds).eq("status", "open")
+      : Promise.resolve({ count: 0 }),
+  ]);
 
-  return { parties, electorates, trend, error: false };
+  return { parties, electorates, trend, votingOpen: (openPolls.count ?? 0) > 0, error: false };
 }
 
 /**

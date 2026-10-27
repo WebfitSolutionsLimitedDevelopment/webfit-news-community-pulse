@@ -59,7 +59,7 @@ function MajorityArc({ shares }: { shares: Record<BlocKey, number> }) {
 }
 
 export default async function CoalitionPage() {
-  const { parties, electorates, trend, error } = await loadCoalitionData();
+  const { parties, electorates, trend, votingOpen, error } = await loadCoalitionData();
   const paths = pathsToMajority(parties);
 
   const blocShare = (bloc: BlocKey) =>
@@ -73,15 +73,16 @@ export default async function CoalitionPage() {
   const opp = shares.opposition;
   const topShare = parties.reduce((max, p) => Math.max(max, p.share), 0);
 
+  const pictureLabel = votingOpen ? "Current reader-poll picture" : "Final reader-poll result";
   const gap = Math.abs(gov - opp);
   const leader = gov > opp ? "government" : opp > gov ? "opposition" : null;
   const verdict = parties.length === 0
     ? { eyebrow: "Waiting for responses", title: "No reader votes yet", share: null as number | null, detail: "Results will appear when readers participate.", colour: "#404040" }
     : leader === "government"
-      ? { eyebrow: "Current reader-poll picture", title: "Government bloc leads", share: gov as number | null, detail: `Ahead of the opposition bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.government.heroColour }
+      ? { eyebrow: pictureLabel, title: "Government bloc leads", share: gov as number | null, detail: `Ahead of the opposition bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.government.heroColour }
       : leader === "opposition"
-        ? { eyebrow: "Current reader-poll picture", title: "Opposition bloc leads", share: opp as number | null, detail: `Ahead of the government bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.opposition.heroColour }
-        : { eyebrow: "Current reader-poll picture", title: "Blocs neck and neck", share: gov as number | null, detail: "Government and opposition blocs have equal shares among participating readers.", colour: BLOC_META.other.heroColour };
+        ? { eyebrow: pictureLabel, title: "Opposition bloc leads", share: opp as number | null, detail: `Ahead of the government bloc by ${gap.toFixed(1)} percentage points among participating readers.`, colour: BLOC_META.opposition.heroColour }
+        : { eyebrow: pictureLabel, title: "Blocs neck and neck", share: gov as number | null, detail: "Government and opposition blocs have equal shares among participating readers.", colour: BLOC_META.other.heroColour };
 
   const lastUpdated = new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium", timeStyle: "short", timeZone: "Pacific/Auckland" }).format(new Date());
 
@@ -103,13 +104,7 @@ export default async function CoalitionPage() {
         {error ? (
           <section className="mt-8 rounded-[2rem] border border-red-200 bg-red-50 p-7 text-red-950">
             <p>The coalition picture could not be loaded right now. Please try again shortly.</p>
-            {/* Voting can still work when the results RPC fails, so keep the CTA. */}
-            <Link
-              href="/electorates-2026"
-              className="mt-5 inline-flex min-h-12 items-center gap-2 rounded-2xl bg-[#7b1025] px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-[#5c0b1b]"
-            >
-              Vote now <ArrowRight size={18} />
-            </Link>
+
           </section>
         ) : (
           <>
@@ -128,13 +123,21 @@ export default async function CoalitionPage() {
                   )}
                   <p className="mt-4 max-w-md text-base leading-7 text-white/85">{verdict.detail}</p>
                   <div className="mt-7 flex flex-wrap items-center gap-3">
-                    <Link
-                      href="/electorates-2026"
-                      className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-6 py-3 font-semibold text-neutral-900 shadow-lg transition hover:bg-neutral-100"
-                    >
-                      Vote now <ArrowRight size={18} />
-                    </Link>
-                    <span className="text-xs text-white/85">Viewed {lastUpdated} NZ time · live totals, not a recorded snapshot</span>
+                    {votingOpen ? (
+                      <>
+                        <Link
+                          href="/electorates-2026"
+                          className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-white px-6 py-3 font-semibold text-neutral-900 shadow-lg transition hover:bg-neutral-100"
+                        >
+                          Vote now <ArrowRight size={18} />
+                        </Link>
+                        <span className="text-xs text-white/85">Viewed {lastUpdated} NZ time · live totals, not a recorded snapshot</span>
+                      </>
+                    ) : (
+                      <span className="inline-flex min-h-10 items-center rounded-2xl border border-white/40 px-4 py-2 text-sm font-semibold text-white">
+                        Voting has closed · final results
+                      </span>
+                    )}
                   </div>
                 </div>
 
