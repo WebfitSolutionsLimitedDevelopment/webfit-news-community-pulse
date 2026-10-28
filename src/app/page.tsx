@@ -10,6 +10,7 @@ import {
   Newspaper,
   Scale,
   BarChart3,
+  Landmark,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BrandHeader } from "@/components/brand-header";
@@ -132,6 +133,25 @@ export default async function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="border-b border-black/10 bg-[#7b1025] text-white">
+          <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-7 sm:flex-row sm:items-center sm:justify-between md:px-8">
+            <div className="flex items-start gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#7b1025]">
+                <Landmark size={22} />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#f2d58b]">New Zealand General Election 2026</p>
+                <h2 className="mt-1 text-xl font-semibold">Live official election results</h2>
+                <p className="mt-1 text-sm leading-6 text-white/80">Party vote and seats from the Electoral Commission, live from 7pm on Saturday 7 November.</p>
+              </div>
+            </div>
+            <Link href="/results-2026" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-white bg-white px-6 py-3 font-bold !text-[#7b1025] shadow-sm transition hover:bg-[#f4ead2]">
+              Live results
+              <ArrowRight size={18} />
+            </Link>
           </div>
         </section>
 
