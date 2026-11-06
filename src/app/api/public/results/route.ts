@@ -1,3 +1,4 @@
+import { POLLS_CLOSE, loadAdvanceVoting } from "@/lib/advance-voting";
 import { NextRequest, NextResponse } from "next/server";
 import { RESULTS_SOURCE_URL, loadOfficialResults } from "@/lib/official-results";
 
@@ -26,19 +27,28 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const headers = corsHeaders(request.headers.get("origin"));
-  const results = await loadOfficialResults();
+  const pollsClosed = Date.now() >= POLLS_CLOSE;
+  const [results, advance] = await Promise.all([loadOfficialResults(), loadAdvanceVoting()]);
+  const hasResults = pollsClosed && results.hasResults;
+  const advanceVoting = hasResults ? null : advance;
 
   return NextResponse.json(
     {
       feedOk: results.ok,
-      hasResults: results.hasResults,
+      hasResults,
+      pollsClosed,
+      advanceVoting,
       updated: results.updated,
-      percentPlacesCounted: results.percentPlacesCounted,
-      percentElectoratesFinal: results.percentElectoratesFinal,
-      totalSeats: results.totalSeats,
+      percentPlacesCounted: hasResults ? results.percentPlacesCounted : 0,
+      percentElectoratesFinal: hasResults ? results.percentElectoratesFinal : 0,
+      totalSeats: hasResults ? results.totalSeats : 0,
       majority: results.majority,
-      blocs: results.blocs,
-      parties: results.parties.filter((p) => p.seats > 0 || p.percent >= 1),
+      blocs: hasResults ? results.blocs : {
+        government: { percent: 0, seats: 0 },
+        opposition: { percent: 0, seats: 0 },
+        other: { percent: 0, seats: 0 },
+      },
+      parties: hasResults ? results.parties.filter((p) => p.seats > 0 || p.percent >= 1) : [],
       resultsUrl: "https://poll.webfitnews.co.nz/results-2026",
       source: "Electoral Commission, preliminary election-night count",
       sourceUrl: RESULTS_SOURCE_URL,
