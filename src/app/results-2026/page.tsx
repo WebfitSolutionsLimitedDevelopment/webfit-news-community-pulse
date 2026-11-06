@@ -18,20 +18,105 @@ export const metadata = {
 const BLOC_ORDER: BlocKey[] = ["government", "other", "opposition"];
 const pct = (v: number) => `${v.toFixed(1)}%`;
 
-function Holding({ feedOk }: { feedOk: boolean }) {
+const ADVANCE_SOURCE = "https://vote.nz/2026-general-election/about/overview/voting-statistics";
+const POLLS_CLOSE = Date.parse("2026-11-07T19:00:00+13:00");
+const votes = new Intl.NumberFormat("en-NZ");
+const snapshot = { date: "5 November", total: 1666908, equivalent2023: 1379985, full2023: 1640204 };
+
+function parseAdvanceVoting(html: string) {
+  let total = 0;
+  let cumulative2023 = 0;
+  let equivalent2023 = 0;
+  let date = "";
+  for (const [, row] of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = Array.from(row.matchAll(/<(td|th)\b[^>]*>([\s\S]*?)<\/\1>/gi), ([, , cell]) =>
+      cell.replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>/gi, "").replace(/<[^>]*>/g, " ").trim(),
+    );
+    if (cells.length !== 4) continue;
+    const [day, , oldVotes, newVotes] = cells;
+    const previous = parseVoteCount(oldVotes);
+    const current = parseVoteCount(newVotes);
+    if (/^totals?$/i.test(day) && date && current === total && total >= snapshot.total && previous !== null) {
+      return { date, total, equivalent2023, full2023: previous };
+    }
+    if (!/^\d{1,2}\s+(October|November)$/i.test(day)) continue;
+    cumulative2023 += previous ?? 0;
+    if (current !== null) {
+      total += current;
+      equivalent2023 = cumulative2023;
+      date = day.replace(/^0/, "");
+    }
+  }
+  return snapshot;
+}
+
+function parseVoteCount(value: string) {
+  return /^\d[\d,]*$/.test(value) ? Number(value.replace(/,/g, "")) : null;
+}
+
+async function loadAdvanceVoting() {
+  try {
+    const response = await fetch(ADVANCE_SOURCE, {
+      next: { revalidate: 900 },
+      signal: AbortSignal.timeout(4500),
+    });
+    if (response.ok) return parseAdvanceVoting(await response.text());
+  } catch {
+    // Keep showing the dated snapshot if Vote NZ is unavailable.
+  }
+  return snapshot;
+}
+
+function AdvanceVoting({ data }: { data: typeof snapshot }) {
+  const difference = data.total - data.equivalent2023;
+  const figures = [
+    { label: "2026 advance votes", value: data.total },
+    { label: "2023 at the equivalent point", value: data.equivalent2023 },
+    { label: "2023 full advance voting period", value: data.full2023 },
+  ];
+
+  return (
+    <section className="mt-6 rounded-[2rem] bg-white p-7 shadow-sm sm:p-10" aria-labelledby="advance-voting">
+      <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#7b1025]">Latest advance voting update</p>
+      <h2 id="advance-voting" className="mt-3 text-2xl font-semibold sm:text-3xl">
+        Advance voting through {data.date}
+      </h2>
+      <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+        {figures.map(({ label, value }) => (
+          <div key={label} className="rounded-2xl bg-[#f7f4ed] p-4">
+            <dt className="text-sm text-neutral-600">{label}</dt>
+            <dd className="mt-1 text-2xl font-bold tabular-nums">{votes.format(value)}</dd>
+          </div>
+        ))}
+      </dl>
+      {difference > 0 && data.equivalent2023 > 0 && (
+        <p className="mt-5 text-sm leading-6 text-neutral-700">
+          {votes.format(difference)} more advance votes than at the equivalent point in 2023
+          ({pct((difference / data.equivalent2023) * 100)} higher).
+        </p>
+      )}
+      <p className="mt-3 text-sm leading-6 text-neutral-600">
+        These figures track advance voting activity and exclude overseas votes.{" "}
+        <a href={ADVANCE_SOURCE} className="font-semibold text-[#7b1025] underline">Source: Electoral Commission</a>
+      </p>
+    </section>
+  );
+}
+
+function Holding({ feedOk, pollsClosed }: { feedOk: boolean; pollsClosed: boolean }) {
   return (
     <section className="mt-8 rounded-[2rem] bg-white p-7 shadow-[0_30px_90px_rgba(38,31,20,0.10)] sm:p-10">
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-[#9d741f]">
-        <Clock size={15} /> Results from 7pm Saturday
+        <Clock size={15} /> {pollsClosed ? "Awaiting the first results" : "Results from 7pm Saturday"}
       </p>
       <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
-        Official results will appear here from 7pm on Saturday 7 November
+        {pollsClosed ? "Waiting for the first preliminary results" : "Preliminary results from 7pm on Saturday 7 November"}
       </h2>
       <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">
         Voting places close at 7pm on election day. The Electoral Commission then releases the preliminary count
         progressively through the evening, and this page updates on its own as the numbers come in.
       </p>
-      {!feedOk && (
+      {pollsClosed && !feedOk && (
         <p className="mt-4 text-sm text-neutral-500">
           The official results feed can&apos;t be reached right now. You can follow the count at{" "}
           <a href={RESULTS_SOURCE_URL} className="font-semibold text-[#7b1025] underline" target="_blank" rel="noopener">
@@ -40,14 +125,14 @@ function Holding({ feedOk }: { feedOk: boolean }) {
           .
         </p>
       )}
-      <p className="mt-6 rounded-2xl bg-[#f7f4ed] p-4 text-sm leading-6 text-neutral-700">
+      {!pollsClosed && <p className="mt-6 rounded-2xl bg-[#f7f4ed] p-4 text-sm leading-6 text-neutral-700">
         Still to vote? Advance voting is open until Friday 6 November, and voting places are open 9am to 7pm on
         election day. Find yours at{" "}
         <a href="https://vote.nz" className="font-semibold text-[#7b1025] underline" target="_blank" rel="noopener">
           vote.nz
         </a>
         .
-      </p>
+      </p>}
     </section>
   );
 }
@@ -93,9 +178,6 @@ function Results({ results }: { results: OfficialResults }) {
       : opp >= results.majority
         ? "Opposition parties have a majority"
         : "No bloc has a majority yet";
-  const shown = results.parties.filter((p) => p.seats > 0 || p.percent >= 1);
-  const rest = results.parties.filter((p) => !(p.seats > 0 || p.percent >= 1));
-  const restPercent = rest.reduce((sum, p) => sum + p.percent, 0);
   const counting = results.percentPlacesCounted < 100;
 
   return (
@@ -142,7 +224,7 @@ function Results({ results }: { results: OfficialResults }) {
               </tr>
             </thead>
             <tbody>
-              {shown.map((p) => (
+              {results.parties.map((p) => (
                 <tr key={p.abbrev} className="border-b border-black/5">
                   <td className="py-2.5 pr-3 font-semibold">
                     <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: BLOC_META[p.bloc].colour }} />
@@ -154,15 +236,6 @@ function Results({ results }: { results: OfficialResults }) {
                   <td className="py-2.5 text-right text-base font-bold tabular-nums">{p.seats}</td>
                 </tr>
               ))}
-              {rest.length > 0 && (
-                <tr className="text-neutral-500">
-                  <td className="py-2.5 pr-3">{rest.length} other {rest.length === 1 ? "party" : "parties"}</td>
-                  <td className="py-2.5 pr-3 text-right tabular-nums">{pct(restPercent)}</td>
-                  <td className="hidden py-2.5 pr-3 text-right sm:table-cell">0</td>
-                  <td className="hidden py-2.5 pr-3 text-right sm:table-cell">0</td>
-                  <td className="py-2.5 text-right font-bold">0</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -172,7 +245,9 @@ function Results({ results }: { results: OfficialResults }) {
 }
 
 export default async function ResultsPage() {
-  const results = await loadOfficialResults();
+  const pollsClosed = Date.now() >= POLLS_CLOSE;
+  const [results, advanceVoting] = await Promise.all([loadOfficialResults(), loadAdvanceVoting()]);
+  const showResults = pollsClosed && results.hasResults;
 
   return (
     <div className="min-h-screen bg-[#f7f4ed] text-neutral-950">
@@ -183,14 +258,26 @@ export default async function ResultsPage() {
         <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#9d741f]">New Zealand General Election 2026</p>
         <h1 className="mt-3 text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">Live election results</h1>
         <p className="mt-3 max-w-2xl text-base leading-7 text-neutral-600 sm:text-lg">
-          Official results from the Electoral Commission, updated through election night.
+          Advance voting figures and election-night results from the Electoral Commission.
         </p>
 
-        {results.hasResults ? <Results results={results} /> : <Holding feedOk={results.ok} />}
+        {showResults ? <Results results={results} /> : <Holding feedOk={results.ok} pollsClosed={pollsClosed} />}
+
+        <AdvanceVoting data={advanceVoting} />
+
+        <section className="mt-6 rounded-[2rem] bg-white p-7 shadow-sm sm:p-10" aria-labelledby="electorate-results">
+          <h2 id="electorate-results" className="text-2xl font-semibold">Electorate results</h2>
+          <p className="mt-2 text-sm leading-6 text-neutral-600">
+            Follow the candidate count for each electorate on the Electoral Commission’s results site.
+          </p>
+          <a href={RESULTS_SOURCE_URL} className="mt-3 inline-flex items-center gap-1 font-semibold text-[#7b1025] underline">
+            View Electoral Commission results <ExternalLink size={15} />
+          </a>
+        </section>
 
         <section className="mt-6 rounded-[2rem] border border-black/5 bg-white/60 p-6 text-sm leading-6 text-neutral-600">
           <p>
-            <strong className="text-neutral-800">These are preliminary results.</strong> The election-night count covers
+            <strong className="text-neutral-800">About election-night results.</strong> The election-night count covers
             ordinary votes only. Special votes, including overseas votes, are counted afterwards, and seats can change.
             The Electoral Commission expects to declare the official result on Friday 27 November 2026.
           </p>
@@ -201,7 +288,7 @@ export default async function ResultsPage() {
           <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>
               Source: Electoral Commission
-              {results.updated ? ` · feed updated ${results.updated.replace("T", " ")} NZ time` : ""}
+              {showResults && results.updated ? ` · feed updated ${results.updated.replace("T", " ")} NZ time` : ""}
             </span>
             <a href={RESULTS_SOURCE_URL} target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-semibold text-[#7b1025]">
               electionresults.govt.nz <ExternalLink size={13} />
