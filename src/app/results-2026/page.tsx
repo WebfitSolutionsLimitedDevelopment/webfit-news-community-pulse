@@ -68,37 +68,77 @@ async function loadAdvanceVoting() {
 }
 
 function AdvanceVoting({ data }: { data: typeof snapshot }) {
-  const difference = data.total - data.equivalent2023;
+  const baseline = data.equivalent2023;
   const figures = [
-    { label: "2026 advance votes", value: data.total },
-    { label: "2023 at the equivalent point", value: data.equivalent2023 },
-    { label: "2023 full advance voting period", value: data.full2023 },
+    { label: "2023 · Same point", value: baseline, colour: "#81766a" },
+    { label: "2023 · Full advance voting period", value: data.full2023, colour: "#9d741f" },
+    { label: "2026 · Through " + data.date, value: data.total, colour: "#9e2142" },
   ];
+  const difference = data.total - baseline;
+  const fullDifference = data.total - data.full2023;
+  const change = (delta: number, reference: number) =>
+    reference > 0 ? (delta > 0 ? "+" : "") + pct((delta / reference) * 100) : "—";
+  const axisStep = baseline || Math.max(data.total, data.full2023, 1);
+  const steps = Math.max(3, Math.ceil((Math.max(data.total, data.full2023, baseline) / axisStep) * 2));
+  const axisMax = (steps * axisStep) / 2;
 
   return (
-    <section className="mt-6 rounded-[2rem] bg-white p-7 shadow-sm sm:p-10" aria-labelledby="advance-voting">
-      <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#7b1025]">Latest advance voting update</p>
-      <h2 id="advance-voting" className="mt-3 text-2xl font-semibold sm:text-3xl">
-        Advance voting through {data.date}
-      </h2>
-      <dl className="mt-5 grid gap-3 sm:grid-cols-3">
-        {figures.map(({ label, value }) => (
-          <div key={label} className="rounded-2xl bg-[#f7f4ed] p-4">
-            <dt className="text-sm text-neutral-600">{label}</dt>
-            <dd className="mt-1 text-2xl font-bold tabular-nums">{votes.format(value)}</dd>
-          </div>
-        ))}
-      </dl>
-      {difference > 0 && data.equivalent2023 > 0 && (
-        <p className="mt-5 text-sm leading-6 text-neutral-700">
-          {votes.format(difference)} more advance votes than at the equivalent point in 2023
-          ({pct((difference / data.equivalent2023) * 100)} higher).
+    <section className="mt-6 overflow-hidden rounded-[2rem] bg-white shadow-sm" aria-labelledby="advance-voting">
+      <div className="bg-[#381522] px-6 py-7 text-white sm:px-10 sm:py-9">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#f2d58b]">Latest advance voting update</p>
+        <h2 id="advance-voting" className="mt-2 text-2xl font-semibold sm:text-3xl">Advance voting through {data.date}</h2>
+        <dl className="mt-6 grid gap-4 sm:grid-cols-3">
+          {[
+            { label: "Advance votes in 2026", value: votes.format(data.total), detail: "Latest reported total" },
+            { label: "Versus the same point in 2023", value: change(difference, baseline), detail: votes.format(Math.abs(difference)) + (difference < 0 ? " fewer votes" : " additional votes") },
+            { label: "Versus the full 2023 advance count", value: change(fullDifference, data.full2023), detail: votes.format(Math.abs(fullDifference)) + (fullDifference < 0 ? " fewer votes" : " additional votes") },
+          ].map(({ label, value, detail }) => (
+            <div key={label} className="rounded-2xl border border-white/15 bg-white/5 p-4">
+              <dt className="text-sm text-white/85">{label}</dt>
+              <dd className="mt-1 text-3xl font-bold tabular-nums text-[#f2d58b]">{value}</dd>
+              <dd className="mt-1 text-xs text-white/75">{detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div className="px-6 py-7 sm:px-10 sm:py-9">
+        <h3 className="text-lg font-semibold">How the totals compare</h3>
+        <p className="mt-1 text-sm text-neutral-600">
+          100% marks the 2023 total at the equivalent point. Hover, focus or tap a bar for its exact count.
         </p>
-      )}
-      <p className="mt-3 text-sm leading-6 text-neutral-600">
-        These figures track advance voting activity and exclude overseas votes.{" "}
-        <a href={ADVANCE_SOURCE} className="font-semibold text-[#7b1025] underline">Source: Electoral Commission</a>
-      </p>
+        <div className="mt-5 space-y-2">
+          {figures.map(({ label, value, colour }) => (
+            <details key={label} className="group rounded-xl border border-transparent open:border-black/10 hover:bg-[#f7f4ed]">
+              <summary className="relative block cursor-pointer list-none rounded-xl px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7b1025] [&::-webkit-details-marker]:hidden">
+                <span className="mb-1.5 flex items-baseline justify-between gap-3 text-sm font-semibold">
+                  <span>{label}</span>
+                  <span className="shrink-0 tabular-nums">{baseline > 0 ? pct((value / baseline) * 100) : votes.format(value)}</span>
+                </span>
+                <span className="relative block h-4 rounded-full bg-[#ece7dc]" aria-hidden>
+                  <span className="block h-full rounded-full motion-safe:transition-opacity group-hover:opacity-75" style={{ width: (value / axisMax) * 100 + "%", background: colour }} />
+                  {baseline > 0 && <span className="absolute inset-y-0 w-px bg-neutral-900/60" style={{ left: (baseline / axisMax) * 100 + "%" }} />}
+                </span>
+                <span className="pointer-events-none absolute bottom-full right-3 z-10 hidden rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white group-hover:block group-focus-within:block group-open:!hidden" aria-hidden>
+                  {votes.format(value)} advance votes
+                </span>
+              </summary>
+              <p className="px-3 pb-2 text-sm text-neutral-700">{votes.format(value)} advance votes</p>
+            </details>
+          ))}
+        </div>
+        {baseline > 0 && (
+          <div className="relative mx-3 mt-2 h-5 text-xs tabular-nums text-neutral-600" aria-hidden>
+            <span className="absolute left-0">0%</span>
+            <span className="absolute -translate-x-1/2 font-semibold" style={{ left: (baseline / axisMax) * 100 + "%" }}>100%</span>
+            <span className="absolute right-0">{steps * 50}%</span>
+          </div>
+        )}
+        <p className="mt-5 text-sm leading-6 text-neutral-600">
+          Advance voting figures exclude overseas votes.{" "}
+          <a href={ADVANCE_SOURCE} className="font-semibold text-[#7b1025] underline">Source: Electoral Commission</a>
+        </p>
+      </div>
     </section>
   );
 }
@@ -189,6 +229,7 @@ function Results({ results }: { results: OfficialResults }) {
             {pct(results.percentPlacesCounted)} of voting places counted
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-5xl">{headline}</h2>
+          <progress className="mt-3 block h-2 w-full accent-[#7b1025]" max={100} value={results.percentPlacesCounted} aria-label="Voting places counted" />
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             {BLOC_ORDER.map((bloc) => (
@@ -230,7 +271,12 @@ function Results({ results }: { results: OfficialResults }) {
                     <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: BLOC_META[p.bloc].colour }} />
                     {p.name}
                   </td>
-                  <td className="py-2.5 pr-3 text-right tabular-nums">{pct(p.percent)}</td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums">
+                    {pct(p.percent)}
+                    <div className="ml-auto mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-[#ece7dc] sm:w-24" aria-hidden>
+                      <div className="h-full rounded-full" style={{ width: pct(p.percent), background: BLOC_META[p.bloc].colour }} />
+                    </div>
+                  </td>
                   <td className="hidden py-2.5 pr-3 text-right tabular-nums sm:table-cell">{p.electorateSeats}</td>
                   <td className="hidden py-2.5 pr-3 text-right tabular-nums sm:table-cell">{p.listSeats}</td>
                   <td className="py-2.5 text-right text-base font-bold tabular-nums">{p.seats}</td>
