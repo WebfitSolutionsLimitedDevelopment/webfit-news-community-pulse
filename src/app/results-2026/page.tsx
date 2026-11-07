@@ -113,7 +113,7 @@ function SeatBar({ results }: { results: OfficialResults }) {
   return (
     <div>
       <div className="relative">
-        <div className="flex h-10 overflow-hidden rounded-xl bg-[#e2e8f0]">
+        <div className="flex h-8 overflow-hidden rounded-lg bg-[#e2e8f0]">
           {BLOC_ORDER.map((bloc) => {
             const seats = results.blocs[bloc].seats;
             if (seats <= 0) return null;
@@ -132,7 +132,7 @@ function SeatBar({ results }: { results: OfficialResults }) {
         <div className="absolute -top-2 -bottom-2 w-0.5 bg-neutral-900" style={{ left: `${majorityAt}%` }} aria-hidden />
       </div>
       <p className="mt-3 text-center text-xs font-semibold text-neutral-600">
-        Line = {results.majority} seats needed to govern ({results.totalSeats} seats in total)
+        Majority line · {results.majority} of {results.totalSeats} projected seats
       </p>
     </div>
   );
@@ -178,57 +178,58 @@ function PartyTable({ parties }: { parties: OfficialResults["parties"] }) {
   );
 }
 
-function Results({ results }: { results: OfficialResults }) {
+function NationalSummary({ results }: { results: OfficialResults }) {
   const gov = results.blocs.government.seats;
   const opp = results.blocs.opposition.seats;
-  const headline =
-    gov >= results.majority
-      ? "Current government parties are projected to have a majority"
-      : opp >= results.majority
-        ? "Opposition parties are projected to have a majority"
-        : "No bloc is projected to have a majority";
-  const counting = results.percentPlacesCounted < 100;
+  const headline = gov >= results.majority
+    ? "Government parties currently have a projected majority"
+    : opp >= results.majority
+      ? "Opposition parties currently have a projected majority"
+      : "No bloc currently has a projected majority";
 
   return (
-    <>
-      <section className="overflow-hidden rounded-xl border border-[#dce4ef] bg-white">
-        <div className="p-5 sm:p-7">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-[#2563eb]">
-            <Landmark size={15} /> {counting ? "Counting under way" : "Election-night count complete"} ·{" "}
-            {pct(results.percentPlacesCounted)} of voting places counted
-          </p>
-          <h2 className="mt-3 text-xl font-bold tracking-tight sm:text-2xl">{headline}</h2>
-          <progress className="mt-4 block h-2 w-full accent-[#2563eb]" max={100} value={results.percentPlacesCounted} aria-label="Voting places counted" />
-
-          <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
-            {BLOC_ORDER.map((bloc) => (
-              <div key={bloc} className="rounded-xl border border-slate-200 border-t-4 p-2.5 shadow-sm sm:p-4" style={{ background: RESULT_BLOCS[bloc].soft, borderTopColor: RESULT_BLOCS[bloc].colour }}>
-                <p className="text-xs font-bold text-neutral-700">{RESULT_BLOCS[bloc].short}</p>
-                <p className="mt-2 text-4xl font-bold tracking-[-0.03em] sm:text-5xl" style={{ color: RESULT_BLOCS[bloc].heroColour }}>
-                  {results.blocs[bloc].seats}
-                  <span className="ml-1 text-base font-semibold text-neutral-600">seats</span>
-                </p>
-                <p className="text-sm text-neutral-600">{pct(results.blocs[bloc].percent)} of party vote</p>
-                <p className="mt-1 hidden text-xs text-neutral-500 sm:block">{RESULT_BLOCS[bloc].parties}</p>
-              </div>
-            ))}
-          </div>
-
-          {results.totalSeats > 0 && <div className="mt-6">
-            <SeatBar results={results} />
-          </div>}
+    <section id="national-overview" className="mb-6 grid gap-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[0.9fr_1.1fr] lg:gap-10 lg:p-6" aria-label="National election overview">
+      <div className="flex flex-col justify-between gap-4">
+        <div>
+          <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700"><Landmark size={14} aria-hidden /> National overview</p>
+          <h2 className="mt-2 max-w-xl text-xl font-bold leading-snug tracking-tight sm:text-2xl">{headline}</h2>
         </div>
-      </section>
+        <div>
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="text-slate-600">Voting places reporting</span>
+            <strong className="text-lg tabular-nums">{pct(results.percentPlacesCounted)}</strong>
+          </div>
+          <progress className="mt-2 block h-1.5 w-full" max={100} value={results.percentPlacesCounted} aria-label="Voting places counted" />
+        </div>
+      </div>
+      <div>
+        <div className="mb-5 grid grid-cols-3 gap-4">
+          {BLOC_ORDER.map((bloc) => (
+            <div key={bloc}>
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-600"><span className="h-2 w-2 rounded-full" style={{background: RESULT_BLOCS[bloc].colour}} aria-hidden />{RESULT_BLOCS[bloc].short}</p>
+              <p className="mt-1 text-3xl font-bold tabular-nums" style={{color: RESULT_BLOCS[bloc].heroColour}}>{results.blocs[bloc].seats}<span className="ml-1 text-xs font-normal text-slate-500">seats</span></p>
+              <p className="mt-1 text-[11px] leading-4 text-slate-500">{RESULT_BLOCS[bloc].parties}</p>
+            </div>
+          ))}
+        </div>
+        {results.totalSeats > 0 && <SeatBar results={results} />}
+      </div>
+    </section>
+  );
+}
 
-      <section className="overflow-hidden rounded-2xl border border-[#dce4ef] bg-white shadow-sm">
-        <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-7">
+function Results({ results }: { results: OfficialResults }) {
+  return (
+    <>
+      <section id="party-results" className="scroll-mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">National picture</p>
-            <h2 className="mt-1 text-xl font-bold">Party vote and projected seats</h2>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">The party vote</p>
+            <h2 className="mt-1 text-xl font-bold">Party standings</h2>
           </div>
           <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">Preliminary</span>
         </div>
-        <div className="p-5 sm:p-7">
+        <div className="p-5 sm:p-6">
           <PartyTable parties={results.parties.filter((party) => party.seats > 0 || party.percent >= 1)} />
           {results.parties.some((party) => party.seats === 0 && party.percent < 1) && (
             <details className="mt-4 rounded-xl border border-slate-200 px-4 py-3">
@@ -256,22 +257,33 @@ export default async function ResultsPage() {
   const showResults = pollsClosed && results.hasResults;
 
   return (
-    <div className="election-night min-h-screen bg-[#eef3f9] text-[#10213b]">
+    <div className="election-night min-h-screen bg-[#f3f6fa] text-[#10213b]">
       <BrandHeader resultsPage />
       <AutoRefresh seconds={60} />
 
-      <main className="w-full px-4 py-6 sm:px-6 sm:py-8">
-        <header className="mb-5 rounded-2xl border-l-4 border-cyan-300 bg-[#101e36] px-5 py-4 text-white shadow-sm sm:px-7 sm:py-5">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#8edce4]">New Zealand General Election 2026</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Live election results</h1>
-          <p className="mt-2 text-sm text-slate-300">Advance voting and preliminary results from the Electoral Commission.</p>
+      <main className="mx-auto w-full max-w-[1920px] px-4 py-5 sm:px-6 lg:px-8">
+        <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">New Zealand · Election 2026</p>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800"><span className="h-1.5 w-1.5 rounded-full bg-emerald-600" aria-hidden />{showResults ? "Preliminary count" : "Election coverage"}</span>
+            </div>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Election night, at a glance</h1>
+            <p className="mt-1.5 text-sm text-slate-500">Party vote, projected seats and the races that matter.</p>
+          </div>
+          <nav className="flex flex-wrap gap-2 text-xs font-semibold" aria-label="Election sections">
+            <a href="#party-results" className="rounded-full border border-slate-300 bg-white px-4 py-2 hover:border-blue-500 hover:text-blue-700">Party results</a>
+            <a href="#candidate-races-title" className="rounded-full border border-slate-300 bg-white px-4 py-2 hover:border-blue-500 hover:text-blue-700">Find your electorate</a>
+            <a href="#advance-voting" className="rounded-full border border-slate-300 bg-white px-4 py-2 hover:border-blue-500 hover:text-blue-700">Advance voting</a>
+          </nav>
         </header>
 
         {showResults && <ResultsTicker
           updated={results.updated}
           items={results.parties.map((party) => party.name + " · " + pct(party.percent) + " party vote · " + party.seats + " projected seats")}
         />}
-        <div className="grid items-start gap-6 lg:grid-cols-2">
+        {showResults && <NationalSummary results={results} />}
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="min-w-0">
         <div className="space-y-4">
           {showResults ? <Results results={results} /> : <Holding feedOk={results.ok} pollsClosed={pollsClosed} />}
