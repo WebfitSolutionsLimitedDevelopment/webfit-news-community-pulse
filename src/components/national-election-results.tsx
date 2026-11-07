@@ -9,7 +9,7 @@ function SeatChamber({ results }: { results: OfficialResults }) {
     const bi = order.indexOf(b.abbrev);
     return (ai < 0 ? order.length : ai) - (bi < 0 ? order.length : bi);
   });
-  const seats = parties.flatMap((party) => Array.from({ length: party.seats }, (_, index) => ({ ...party, electorate: index < party.electorateSeats })));
+  const seats = parties.flatMap((party) => Array.from({ length: party.seats }, () => party));
   const radii = [70, 94, 118, 142, 166, 190];
   const totalRadius = radii.reduce((sum, radius) => sum + radius, 0);
   const counts = radii.map((radius) => Math.floor(seats.length * radius / totalRadius));
@@ -20,23 +20,17 @@ function SeatChamber({ results }: { results: OfficialResults }) {
   })).sort((a, b) => b.angle - a.angle || a.row - b.row);
 
   return (
-    <figure className="relative mx-auto w-full max-w-[390px]">
-      <svg viewBox="0 0 420 235" role="img" aria-label={results.totalSeats + " projected parliamentary seats. Filled dots are electorate seats and hollow dots are list seats."} className="w-full">
+    <figure className="relative mx-auto w-full max-w-[500px]">
+      <svg viewBox="0 0 420 235" role="img" aria-label={results.totalSeats + " projected parliamentary seats. Each dot represents one seat."} className="w-full">
         {points.map((point, index) => (
-          <circle key={index} cx={point.x} cy={point.y} r={5.4} fill={seats[index].electorate ? partyColour(seats[index].abbrev) : "#102536"} stroke={partyColour(seats[index].abbrev)} strokeWidth={seats[index].electorate ? 0.8 : 2.5}>
-            <title>{seats[index].name} · {seats[index].electorate ? "electorate" : "list"} seat · projected</title>
+          <circle key={index} cx={point.x} cy={point.y} r={5.4} fill={partyColour(seats[index].abbrev)} stroke="#ffffff" strokeOpacity="0.16" strokeWidth="0.8">
+            <title>{seats[index].name} · projected seat</title>
           </circle>
         ))}
         <text x="210" y="183" textAnchor="middle" fill="#ffffff" fontFamily="Arial, sans-serif" fontSize="38" fontWeight="700">{results.majority}</text>
         <text x="210" y="204" textAnchor="middle" fill="#b6c8d9" fontFamily="Arial, sans-serif" fontSize="11">seats for a majority</text>
       </svg>
-      <figcaption className="space-y-2 text-center text-[11px] text-slate-300">
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#8dddd7]" aria-hidden />Electorate seats</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full border-2 border-[#8dddd7]" aria-hidden />List seats</span>
-        </div>
-        <p>{results.totalSeats} seats projected{results.totalSeats > 120 ? " · " + (results.totalSeats - 120) + " above the standard 120" : ""}</p>
-      </figcaption>
+      <figcaption className="text-center text-[11px] text-slate-400">One dot = one projected seat · {results.totalSeats} seats currently projected</figcaption>
     </figure>
   );
 }
@@ -56,7 +50,7 @@ export function NationalResults({ results }: { results: OfficialResults }) {
 
   function rows(parties: OfficialResults["parties"]) {
     return parties.map((party) => (
-      <li key={party.abbrev} className="group grid grid-cols-[40px_minmax(0,1fr)_62px_40px] items-center gap-x-3 rounded-lg border-b border-slate-100 px-1 py-2.5 transition-colors hover:bg-slate-50 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
+      <li key={party.abbrev} className="group grid grid-cols-[40px_minmax(0,1fr)_62px_40px] items-center gap-x-3 rounded-lg border-b border-slate-100 px-1 py-3 transition-colors hover:bg-slate-50 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
         <PartyLogo name={party.name} compact />
         <div className="min-w-0">
           <p className="text-sm font-bold leading-5 text-[#172b40]">{party.name}</p>
@@ -75,18 +69,18 @@ export function NationalResults({ results }: { results: OfficialResults }) {
 
   return (
     <section id="party-results" className="mb-8 grid scroll-mt-6 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,35,55,0.07)] lg:grid-cols-[0.9fr_1.1fr]" aria-label="National results">
-      <div className="relative flex flex-col bg-[radial-gradient(ellipse_at_top_left,#1c4653_0%,#102536_65%)] px-5 py-5 text-white sm:px-6">
+      <div className="relative flex flex-col bg-[radial-gradient(ellipse_at_top_left,#1c4653_0%,#102536_65%)] px-6 py-7 text-white sm:px-8">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8dddd7]">Balance of power</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8dddd7]">The shape of Parliament</p>
           <span className="rounded-full border border-white/20 px-2.5 py-1 text-[10px] font-semibold text-slate-300">Projected seats</span>
         </div>
-        <h2 className="mt-3 max-w-lg text-xl font-bold leading-tight tracking-tight sm:text-2xl">{headline}</h2>
+        <h2 className="mt-4 max-w-lg text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{headline}</h2>
         <div className="mt-4 rounded-xl border border-white/15 bg-white/5 px-4 py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-[11px] font-semibold text-[#b6d9dd]">Majority watch</p>
             <p className="text-sm font-bold">{results.majority} seats needed</p>
           </div>
-          <p className="mt-1 text-xs leading-5 text-slate-300">{government === results.majority ? "Government grouping is at the majority threshold." : government > results.majority
+          <p className="mt-1 text-xs leading-5 text-slate-300">{government >= results.majority
             ? "Government grouping is " + (government - results.majority) + " seat" + (government - results.majority === 1 ? "" : "s") + " above the majority threshold."
             : "Government grouping needs " + (results.majority - government) + " more seat" + (results.majority - government === 1 ? "" : "s") + " to reach a majority."}</p>
           <div className="relative mt-3 h-2 rounded-full bg-white/10" aria-hidden>
@@ -94,7 +88,7 @@ export function NationalResults({ results }: { results: OfficialResults }) {
             <span className="absolute -top-1 h-4 w-0.5 bg-white" style={{left: results.majority / Math.max(1, results.totalSeats) * 100 + "%"}} />
           </div>
         </div>
-        <div className="my-auto py-3"><SeatChamber results={results} /></div>
+        <div className="my-auto py-5"><SeatChamber results={results} /></div>
         <div className="grid grid-cols-3 gap-3 border-t border-white/15 pt-4">
           {[
             { label: "Government", seats: government, colour: "#79afff", parties: "National · ACT · NZ First" },
@@ -109,15 +103,15 @@ export function NationalResults({ results }: { results: OfficialResults }) {
           ))}
         </div>
       </div>
-      <div className="px-5 py-5 sm:px-6">
+      <div className="px-5 py-6 sm:px-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#00776f]">Nationwide party vote</p>
-            <h2 className="mt-1 text-xl font-bold text-[#172b40]">Party vote and seats</h2>
+            <h2 className="mt-1 text-xl font-bold text-[#172b40]">How the parties stand</h2>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-semibold text-slate-500">Sorted by vote share</span>
         </div>
-        <div className="mt-4 grid grid-cols-[40px_minmax(0,1fr)_62px_40px] gap-x-3 border-b border-slate-200 pb-2 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
+        <div className="mt-5 grid grid-cols-[48px_minmax(0,1fr)_62px_46px] gap-x-3 border-b border-slate-200 pb-2 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
           <span className="col-span-2 text-left">Party</span><span>Vote share</span><span>Seats</span>
         </div>
         <ul>{rows(main)}</ul>
