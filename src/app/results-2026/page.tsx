@@ -1,4 +1,4 @@
-import { PartyLogo } from "@/components/party-logo";
+import { PartyLogo } from "@/components/election-party-logo";
 import { partyColour } from "@/lib/result-colours";
 import { Suspense } from "react";
 import { CandidateResults } from "@/components/candidate-results";
