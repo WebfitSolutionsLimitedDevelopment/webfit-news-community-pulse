@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PartyLogo } from "@/components/party-logo";
 import { partyColour } from "@/lib/result-colours";
 import { ResultsTicker } from "@/components/results-ticker";
 import type { ElectorateRace } from "@/lib/candidate-results";
@@ -63,7 +64,7 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{voted ? (tied ? "Joint leader" : "Leading candidate") : "Count pending"}</p>
                     <p className="mt-1 text-xl font-bold tracking-tight text-[#10213b]">{voted ? displayName(leader.name) : "Awaiting candidate votes"}</p>
-                    <p className="mt-1 text-sm font-semibold" style={{ color: partyColour(leader.party) }}>{leader.party}</p>
+                    <div className="mt-2 flex items-center gap-2"><PartyLogo name={leader.party} /><p className="text-sm font-semibold" style={{ color: partyColour(leader.party) }}>{leader.party}</p></div>
                   </div>
                   {voted && <div className="text-right">
                     <p className="text-2xl font-bold tabular-nums text-[#10213b]">{number.format(leader.votes)}</p>
