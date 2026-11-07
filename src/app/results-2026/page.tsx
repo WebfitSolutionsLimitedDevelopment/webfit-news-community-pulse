@@ -16,8 +16,8 @@ import { RESULTS_SOURCE_URL, loadOfficialResults } from "@/lib/official-results"
 
 export const revalidate = 60;
 export const metadata = {
-  title: "NZ Election 2026 Live Results | Webfit News",
-  description: "Live New Zealand election results, projected seats, party vote shares and every electorate race. Electoral Commission data.",
+  title: "NZ Election 2026 Preliminary Results & Updates | Webfit News",
+  description: "Latest preliminary New Zealand election results, projected seats, party vote shares and electorate results. Updates from Electoral Commission data.",
 };
 const pct = (value: number) => value.toFixed(1) + "%";
 const votes = new Intl.NumberFormat("en-NZ");
@@ -82,7 +82,7 @@ function Holding({ feedOk, pollsClosed }: { feedOk: boolean; pollsClosed: boolea
     <section aria-labelledby="count-status" className="rounded-lg border border-[#dce4ef] border-l-4 border-l-[#2563eb] bg-white px-4 py-3 sm:px-5">
       <h2 id="count-status" className="flex items-center gap-2 font-bold">
         <Clock size={16} className="shrink-0 text-[#2563eb]" aria-hidden />
-        {pollsClosed ? "Awaiting the first preliminary results" : "Preliminary results from 7 pm · Saturday 7 November"}
+        {pollsClosed ? (feedOk ? "Awaiting preliminary results" : "Preliminary results temporarily unavailable") : "Preliminary results from 7 pm · Saturday 7 November"}
       </h2>
       <p className="mt-1 text-sm leading-6 text-neutral-600">
         {pollsClosed && !feedOk ? (
@@ -119,12 +119,12 @@ export default async function ResultsPage() {
         <header className="mb-5 grid items-center gap-5 rounded-2xl border border-[#c5ddf6] border-t-4 border-t-[#0869cd] bg-white p-5 shadow-[0_6px_30px_rgba(15,35,55,0.04)] sm:grid-cols-[minmax(0,1fr)_280px] sm:p-6">
           <div>
             <p className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#005bb5]">
-              <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Election night live
+              <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Preliminary results
               <LiveViewers />
               <Suspense fallback={null}><VoiceCommentary results={results} /></Suspense>
             </p>
-            <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] text-[#063d7e] sm:text-5xl">Election 2026</h1>
-            <p className="mt-2 text-sm text-slate-500">The national picture. The local contests. Every update.</p>
+            <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] text-[#063d7e] sm:text-5xl">Election 2026 results</h1>
+            <p className="mt-2 text-sm text-slate-500">Latest party votes, projected seats and electorate results.</p>
             <nav className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500" aria-label="Election sections">
               <a href="#party-results" className="rounded-lg bg-[#0759b0] px-3 py-2 text-white">National result</a>
               <a href="#candidate-races-title" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">Electorate races</a>
@@ -165,7 +165,7 @@ export default async function ResultsPage() {
         </details>
 
         <section className="mb-6 border-t border-slate-200 pt-5 text-[11px] leading-5 text-slate-500" aria-label="About these results">
-          <p><strong className="text-slate-700">Preliminary results.</strong> Ordinary votes are counted on election night. Special votes, including overseas votes, are counted afterwards. Leads and projected seats can change. Official results are expected on Friday 27 November 2026.</p>
+          <p><strong className="text-slate-700">Preliminary results.</strong> The election-night count covers ordinary votes. Special votes, including overseas votes, and official checks follow. Leads and projected seats can change. Official results are expected on Friday 27 November 2026.</p>
           <p className="mt-2">Government grouping · National, ACT and NZ First. Opposition grouping · Labour, Green and Te Pāti Māori. Groupings are comparisons and do not confirm coalition agreements.</p>
           <a href={RESULTS_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold text-[#00776f] underline">Source Electoral Commission <ExternalLink size={12} aria-hidden /></a>
         </section>
