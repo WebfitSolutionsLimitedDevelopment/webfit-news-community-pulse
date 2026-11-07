@@ -20,9 +20,9 @@ function ClosestRaces({ races, onSelect }: { races: ElectorateRace[]; onSelect: 
     .slice(0,3);
   if (!closest.length) return null;
   return (
-    <section className="mb-6 rounded-[24px] border border-[#213e50] bg-[#102536] p-5 shadow-[0_12px_36px_rgba(15,35,55,0.1)] sm:p-7" aria-labelledby="closest-races-title">
+    <section className="mb-6 rounded-[24px] border border-[#0759b0] bg-[#0759b0] p-5 shadow-[0_12px_36px_rgba(15,35,55,0.1)] sm:p-7" aria-labelledby="closest-races-title">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#f4cc80]">Seats to watch</p><h2 id="closest-races-title" className="mt-1 text-2xl font-bold tracking-tight text-white">Closest races right now</h2></div>
+        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#ffdc70]">Seats to watch</p><h2 id="closest-races-title" className="mt-1 text-2xl font-bold tracking-tight text-white">Closest races right now</h2></div>
         <p className="max-w-md text-xs leading-5 text-slate-300">The narrowest leads in the count. Every new result can change the order.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
@@ -30,7 +30,7 @@ function ClosestRaces({ races, onSelect }: { races: ElectorateRace[]; onSelect: 
           const [leader, runner] = race.candidates;
           const margin = leader.votes - runner.votes;
           return (
-            <button key={race.id} type="button" onClick={() => onSelect(race.name)} className="min-w-0 rounded-xl border border-white/20 bg-white p-5 text-left transition-shadow hover:shadow-[0_0_0_3px_rgba(141,221,215,0.5)] focus-visible:outline-2 focus-visible:outline-[#00776f]" aria-label={"Explore " + race.name + ", " + number.format(margin) + " vote margin"}>
+            <button key={race.id} type="button" onClick={() => onSelect(race.name)} className="min-w-0 rounded-xl border border-white/20 bg-white p-5 text-left transition-shadow hover:shadow-[0_0_0_3px_rgba(141,221,215,0.5)] focus-visible:outline-2 focus-visible:outline-[#005bb5]" aria-label={"Explore " + race.name + ", " + number.format(margin) + " vote margin"}>
               <div className="flex items-start justify-between gap-3"><h3 className="text-sm font-bold">{race.name}</h3><div className="shrink-0 rounded-lg bg-[#fff3d9] px-3 py-1 text-right"><strong className="text-3xl font-bold tabular-nums text-[#855314]">{number.format(margin)}</strong><p className="text-[10px] font-semibold text-slate-500">{margin === 0 ? "votes · tied" : "vote lead"}</p></div></div>
               <div className="mt-3 space-y-3">
                 {[leader, runner].map((candidate,index) => <div key={candidate.id}>
@@ -39,7 +39,7 @@ function ClosestRaces({ races, onSelect }: { races: ElectorateRace[]; onSelect: 
                   <span className="sr-only">{index === 0 ? "Current leader" : "Second place"} · {(candidate.votes / race.validVotes * 100).toFixed(1)}% of valid candidate votes</span>
                 </div>)}
               </div>
-              <div className="mt-4 flex justify-between gap-2 border-t border-slate-100 pt-3 text-[10px]"><span className="text-slate-500">{race.reporting.toFixed(1)}% of voting places reporting</span><span className="font-bold text-[#00776f]">Explore race →</span></div>
+              <div className="mt-4 flex justify-between gap-2 border-t border-slate-100 pt-3 text-[10px]"><span className="text-slate-500">{race.reporting.toFixed(1)}% of voting places reporting</span><span className="font-bold text-[#005bb5]">Explore race →</span></div>
             </button>
           );
         })}
@@ -82,10 +82,10 @@ function ElectorateParade({ races }: { races: ElectorateRace[] }) {
   );
 
   return (
-    <section className="electorate-parade mb-6 min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-[#edf3f4] py-5" aria-labelledby="electorate-parade-title">
+    <section className="electorate-parade mb-6 min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-[#edf6ff] py-5" aria-labelledby="electorate-parade-title">
       <div className="mb-4 flex items-center justify-between gap-3 px-5 sm:px-7">
-        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#00776f]">Around the electorates</p><h2 id="electorate-parade-title" className="mt-1 text-lg font-bold">Every race. A–Z.</h2><p className="mt-1 text-xs text-slate-500">{ordered.length} electorates · Latest preliminary results · Refreshes every 60s</p></div>
-        <button type="button" aria-pressed={paused} onClick={() => setPaused(!paused)} className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#00776f] focus-visible:outline-2 focus-visible:outline-[#00776f]">{paused ? "Resume cards" : "Pause cards"}</button>
+        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#005bb5]">Around the electorates</p><h2 id="electorate-parade-title" className="mt-1 text-lg font-bold">Every race. A–Z.</h2><p className="mt-1 text-xs text-slate-500">{ordered.length} electorates · Latest preliminary results · Refreshes every 60s</p></div>
+        <button type="button" aria-pressed={paused} onClick={() => setPaused(!paused)} className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#00776f] focus-visible:outline-2 focus-visible:outline-[#005bb5]">{paused ? "Resume cards" : "Pause cards"}</button>
       </div>
       <div className="electorate-parade-window" tabIndex={0} role="region" aria-label="Electorate results moving from right to left in alphabetical order. Hover or focus to pause. Search all races below.">
         <div className="electorate-parade-track flex w-max" style={{ animationDuration: ordered.length * 10 + "s", animationPlayState: paused ? "paused" : undefined }}>
@@ -134,20 +134,20 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
     <>
     <ClosestRaces races={races} onSelect={(name) => { setQuery(name); setPage(0); panel.current?.scrollIntoView({ block: "start" }); }} />
     <ElectorateParade races={races} />
-    <section ref={panel} className="mb-6 scroll-mt-5 rounded-[24px] border border-slate-200 bg-white p-5 sm:p-7" aria-labelledby="candidate-races-title">
+    <section ref={panel} className="mb-6 scroll-mt-5 rounded-[24px] border border-[#c7ddf4] bg-white p-5 sm:p-7" aria-labelledby="candidate-races-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-[#00776f]">Every local contest</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#005bb5]">Every local contest</p>
           <h2 id="candidate-races-title" className="mt-1 scroll-mt-5 text-2xl font-bold tracking-tight">Follow the electorate races</h2>
           <p className="mt-1 text-xs text-slate-500">{races.length} of 71 electorates · Preliminary</p>
         </div>
         <div className="flex rounded-lg bg-slate-100 p-1" aria-label="Race view">
-          <button type="button" onClick={() => { setShowAll(false); setPage(0); }} aria-pressed={!showAll} className={`rounded-md px-3 py-2 text-xs font-semibold ${!showAll ? "bg-white text-[#00776f] shadow-sm" : "text-slate-600 hover:text-[#00776f]"}`}>Key races</button>
-          <button type="button" onClick={() => { setShowAll(true); setPage(0); }} aria-pressed={showAll} className={`rounded-md px-3 py-2 text-xs font-semibold ${showAll ? "bg-white text-[#00776f] shadow-sm" : "text-slate-600 hover:text-[#00776f]"}`}>All electorates</button>
+          <button type="button" onClick={() => { setShowAll(false); setPage(0); }} aria-pressed={!showAll} className={`rounded-md px-3 py-2 text-xs font-semibold ${!showAll ? "bg-white text-[#005bb5] shadow-sm" : "text-slate-600 hover:text-[#005bb5]"}`}>Key races</button>
+          <button type="button" onClick={() => { setShowAll(true); setPage(0); }} aria-pressed={showAll} className={`rounded-md px-3 py-2 text-xs font-semibold ${showAll ? "bg-white text-[#005bb5] shadow-sm" : "text-slate-600 hover:text-[#005bb5]"}`}>All electorates</button>
         </div>
       </div>
       <label className="mt-4 block text-xs font-semibold text-slate-600" htmlFor="candidate-search">Find a candidate or electorate</label>
-      <input id="candidate-search" type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search names or electorates…" className="mb-4 mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm placeholder:text-slate-500 focus:bg-white focus:outline-2 focus:outline-[#00776f]" />
+      <input id="candidate-search" type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search names or electorates…" className="mb-4 mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm placeholder:text-slate-500 focus:bg-white focus:outline-2 focus:outline-[#005bb5]" />
       <div className={`grid items-start gap-4 ${pageRaces.length > 1 ? "md:grid-cols-2 xl:grid-cols-3" : ""}`}>
         {pageRaces.map((race) => {
           const leader = race.candidates[0];
