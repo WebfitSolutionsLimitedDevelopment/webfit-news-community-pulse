@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PartyLogo } from "@/components/party-logo";
+import { PartyLogo } from "@/components/election-party-logo";
 import { partyColour } from "@/lib/result-colours";
 import { ResultsTicker } from "@/components/results-ticker";
 import type { ElectorateRace } from "@/lib/candidate-results";
