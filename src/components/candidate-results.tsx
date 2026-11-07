@@ -59,12 +59,13 @@ function ElectorateParade({ races }: { races: ElectorateRace[] }) {
       </div>
       <p className="mt-3 px-5 text-[10px] text-slate-500 sm:px-7">Hover to pause · Use the search below to explore any race · Source Electoral Commission</p>
       <style>{`
-        .electorate-parade-window { overflow-x: auto; scrollbar-width: thin; }
+        .electorate-parade-window { overflow: hidden; }
         .electorate-parade-track { animation: electorate-parade-travel linear infinite; }
         .electorate-parade-window:hover .electorate-parade-track,
         .electorate-parade-window:focus-within .electorate-parade-track { animation-play-state: paused !important; }
         @keyframes electorate-parade-travel { to { transform: translateX(-50%); } }
         @media (prefers-reduced-motion: reduce) {
+          .electorate-parade-window { overflow-x: auto; scrollbar-width: thin; }
           .electorate-parade-track { animation: none; }
           .electorate-parade-copy { display: none; }
         }
