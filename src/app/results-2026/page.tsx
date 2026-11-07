@@ -1,3 +1,4 @@
+import { LiveViewers } from "@/components/live-viewers";
 import { Suspense } from "react";
 import { NationalResults } from "@/components/national-election-results";
 import { CandidateResults } from "@/components/candidate-results";
@@ -109,8 +110,9 @@ export default async function ResultsPage() {
       <main className="mx-auto max-w-[1680px] px-4 py-5 sm:px-6 lg:px-10">
         <header className="mb-5 grid items-center gap-5 sm:grid-cols-[minmax(0,1fr)_280px]">
           <div>
-            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#00776f]">
+            <p className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#00776f]">
               <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Preliminary results
+              <LiveViewers />
             </p>
             <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">Election 2026</h1>
             <nav className="mt-3 flex flex-wrap gap-5 text-xs font-semibold text-slate-500" aria-label="Election sections">
