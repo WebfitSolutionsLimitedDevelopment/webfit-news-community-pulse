@@ -49,7 +49,7 @@ export function PartyLogo({ name, compact = false }: { name: string; compact?: b
   const key = ALIASES[name] ?? name;
   const source = LOGOS[key];
   return (
-    <span className={`inline-flex ${compact ? "h-8 w-12 p-1" : "h-12 w-20 p-1.5"} shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white`} title={name}>
+    <span className={`inline-flex ${compact ? "h-8 w-12 p-1" : "h-10 w-14 p-1 sm:h-12 sm:w-20 sm:p-1.5"} shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white`} title={name}>
       {source && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={source} alt={name + " logo"} width={80} height={48} loading="lazy" referrerPolicy="no-referrer" className="max-h-full max-w-full object-contain" onError={() => setFailed(true)} />
