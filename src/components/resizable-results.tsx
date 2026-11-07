@@ -4,9 +4,9 @@ import { useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 export function ResizableResults({ children, video }: { children: ReactNode; video: ReactNode }) {
   const container = useRef<HTMLDivElement>(null);
-  const [split, setSplit] = useState(60);
+  const [split, setSplit] = useState(45);
   const [dragging, setDragging] = useState(false);
-  const clamp = (value: number) => Math.min(70, Math.max(45, value));
+  const clamp = (value: number) => Math.min(70, Math.max(35, value));
 
   return (
     <div
@@ -22,7 +22,7 @@ export function ResizableResults({ children, video }: { children: ReactNode; vid
           aria-label="Resize RNZ video panel"
           aria-orientation="vertical"
           aria-controls="election-results-content rnz-video-panel"
-          aria-valuemin={45}
+          aria-valuemin={35}
           aria-valuemax={70}
           aria-valuenow={split}
           aria-valuetext={`RNZ video uses ${100 - split}% of the available width`}
@@ -44,11 +44,11 @@ export function ResizableResults({ children, video }: { children: ReactNode; vid
           }}
           onPointerCancel={() => setDragging(false)}
           onLostPointerCapture={() => setDragging(false)}
-          onDoubleClick={() => setSplit(60)}
+          onDoubleClick={() => setSplit(45)}
           onKeyDown={(event) => {
             if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
             event.preventDefault();
-            if (event.key === "Home") setSplit(45);
+            if (event.key === "Home") setSplit(35);
             else if (event.key === "End") setSplit(70);
             else setSplit((value) => clamp(value + (event.key === "ArrowLeft" ? -2 : 2)));
           }}
