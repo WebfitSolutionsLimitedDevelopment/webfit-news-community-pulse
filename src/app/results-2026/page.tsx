@@ -1,13 +1,10 @@
-import { CompletedCounts } from "@/components/completed-counts";
 import { ElectionVoice } from "@/components/election-voice";
-import { ElectionUpdate } from "@/components/election-update";
 import { LiveViewers } from "@/components/live-viewers";
 import { Suspense } from "react";
 import { NationalResults } from "@/components/national-election-results";
 import { CandidateResults } from "@/components/candidate-results";
 import { loadCandidateRaces } from "@/lib/candidate-results";
-import { ResultsTicker } from "@/components/results-ticker";
-import { ADVANCE_SOURCE, POLLS_CLOSE, loadAdvanceVoting } from "@/lib/advance-voting";
+import { POLLS_CLOSE } from "@/lib/advance-voting";
 import { Clock, ExternalLink } from "lucide-react";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BrandHeader } from "@/components/brand-header";
@@ -20,63 +17,6 @@ export const metadata = {
   description: "Latest preliminary New Zealand election results, projected seats, party vote shares and electorate results. Updates from Electoral Commission data.",
 };
 const pct = (value: number) => value.toFixed(1) + "%";
-const votes = new Intl.NumberFormat("en-NZ");
-
-function AdvanceVoting({ data }: { data: Awaited<ReturnType<typeof loadAdvanceVoting>> }) {
-  const baseline = data.equivalent2023;
-  const figures = [
-    { label: "2023 · Same point", value: baseline, colour: "#94a3b8" },
-    { label: "2023 · Full advance voting period", value: data.full2023, colour: "#64748b" },
-    { label: "2026 · Through " + data.date, value: data.total, colour: "#2563eb" },
-  ];
-  const difference = data.total - baseline;
-  const fullDifference = data.total - data.full2023;
-  const change = (delta: number, reference: number) =>
-    reference > 0 ? (delta > 0 ? "+" : "") + pct((delta / reference) * 100) : "—";
-  const chartMax = Math.max(...figures.map(({ value }) => value), 1);
-
-  return (
-    <section id="advance-voting" className="scroll-mt-6 rounded-xl border border-[#dce4ef] bg-white" aria-labelledby="advance-title">
-      <div className="px-5 py-5 sm:px-7">
-        <h2 id="advance-title" className="text-lg font-bold">Advance voting</h2>
-        <p className="mt-1 text-sm text-neutral-600">Through {data.date} · Excludes overseas votes</p>
-        <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3">
-          <div className="col-span-2 sm:col-span-1">
-            <dt className="text-sm text-neutral-600">Advance votes issued</dt>
-            <dd className="mt-1 text-4xl font-bold tracking-tight text-[#1d4ed8] tabular-nums">{votes.format(data.total)}</dd>
-          </div>
-          {[
-            { label: "Same point in 2023", value: change(difference, baseline) },
-            { label: "Full 2023 advance count", value: change(fullDifference, data.full2023) },
-          ].map(({ label, value }) => (
-            <div key={label}>
-              <dt className="text-sm text-neutral-600">vs {label}</dt>
-              <dd className="mt-1 text-2xl font-bold tabular-nums sm:text-3xl">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-      <div className="border-t border-[#e2e8f0] px-5 py-4 sm:px-7">
-        <h3 className="text-sm font-bold">Advance vote totals compared</h3>
-        <ul className="mt-3 space-y-3">
-          {figures.map(({ label, value, colour }) => (
-            <li key={label}>
-              <div className="flex justify-between gap-3 text-sm">
-                <span>{label}</span>
-                <strong className="shrink-0 tabular-nums">{votes.format(value)}</strong>
-              </div>
-              <div className="mt-1 h-1.5 rounded-full bg-[#edf2f7]" aria-hidden>
-                <div className="h-full rounded-full" style={{ width: pct(value / chartMax * 100), background: colour }} />
-              </div>
-            </li>
-          ))}
-        </ul>
-        <a href={ADVANCE_SOURCE} className="mt-4 inline-block text-xs font-semibold text-[#1d4ed8] underline">Source: Electoral Commission</a>
-      </div>
-    </section>
-  );
-}
-
 function Holding({ feedOk, pollsClosed }: { feedOk: boolean; pollsClosed: boolean }) {
   return (
     <section aria-labelledby="count-status" className="rounded-lg border border-[#dce4ef] border-l-4 border-l-[#2563eb] bg-white px-4 py-3 sm:px-5">
@@ -102,20 +42,60 @@ async function VoiceCommentary({ results }: { results: Awaited<ReturnType<typeof
 
 async function CandidateResultsPanel() {
   const races = await loadCandidateRaces();
-  return <CandidateResults races={races} />;
+  return <CandidateResults races={races} showParade={false} />;
+}
+
+
+function ResultsExplained({ results }: { results: Awaited<ReturnType<typeof loadOfficialResults>> }) {
+  const sorted=[...results.parties].sort((a,b)=>b.seats-a.seats);
+  const largest=sorted.filter(p=>p.seats===sorted[0]?.seats);
+  const government=results.blocs.government.seats;
+  const gap=government-results.majority;
+  return <section id="results-explained" aria-labelledby="results-explained-title" className="mb-6 scroll-mt-5 rounded-2xl border border-blue-200 bg-white p-5 sm:p-7">
+    <p className="text-[10px] font-bold uppercase tracking-widest text-[#005bb5]">The result, explained</p>
+    <h2 id="results-explained-title" className="mt-1 text-2xl font-bold text-[#063d7e]">Where things stand</h2>
+    <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">These are preliminary results, not the final outcome. The reporting percentage counts voting places, not every vote. Special votes and official checks can change both electorate leads and projected seats.</p>
+    <div className="mt-5 grid gap-3 md:grid-cols-3">
+      <article className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+        <h3 className="text-xs font-semibold text-slate-600">Most projected seats</h3>
+        <p className="mt-2 text-2xl font-bold text-[#063d7e]">{largest.map(p=>p.name).join(" / ")} · {largest[0]?.seats ?? "—"}</p>
+        <p className="mt-2 text-xs leading-5 text-slate-600">{largest[0]?.seats >= results.majority ? "At or above the majority line in the current projection." : "Below the "+results.majority+" seats needed for a majority alone."} This does not declare a government.</p>
+      </article>
+      <article className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+        <h3 className="text-xs font-semibold text-slate-600">National + ACT + NZ First</h3>
+        <p className="mt-2 text-2xl font-bold text-[#063d7e]">{government} projected seats</p>
+        <p className="mt-2 text-xs leading-5 text-slate-600">{gap>=0 ? gap+" above the "+results.majority+"-seat majority line." : Math.abs(gap)+" short of the "+results.majority+"-seat majority line."} A grouping for comparison, not confirmation of a coalition agreement.</p>
+      </article>
+      <article className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <h3 className="text-xs font-semibold text-slate-600">Next official milestone</h3>
+        <p className="mt-2 text-2xl font-bold text-[#063d7e]">27 November</p>
+        <p className="mt-2 text-xs leading-5 text-slate-600">Scheduled declaration of official results. Special votes, including overseas votes, are checked and counted before the official result.</p>
+      </article>
+    </div>
+    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">
+      <strong className="text-[#063d7e]">How to tell if anything has changed</strong>
+      <p className="mt-1">Commission feed timestamp: <strong>{results.updated?.replace("T"," ") || "Unavailable"} NZ time</strong>. The page checks every 60 seconds. A refresh does not mean new votes have been added. If this timestamp stays the same, the Commission has not supplied a newer national snapshot.</p>
+      <p className="mt-1">Each electorate can have its own update time. Open a race below to see its timestamp and source.</p>
+    </div>
+    <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-[#005bb5]">
+      <a className="underline" href={RESULTS_SOURCE_URL} target="_blank" rel="noopener noreferrer">Verify the results · Electoral Commission</a>
+      <a className="underline" href="https://vote.nz/2026-general-election/about/overview/what-happens-after-the-election" target="_blank" rel="noopener noreferrer">How preliminary results become official</a>
+      <a className="underline" href="https://vote.nz/2026-general-election/about/overview/key-dates" target="_blank" rel="noopener noreferrer">Official timetable</a>
+    </div>
+  </section>;
 }
 
 export default async function ResultsPage() {
   // eslint-disable-next-line react-hooks/purity
   const pollsClosed = Date.now() >= POLLS_CLOSE;
-  const [results, advanceVoting] = await Promise.all([loadOfficialResults(), loadAdvanceVoting()]);
+  const results = await loadOfficialResults();
   const showResults = pollsClosed && results.hasResults;
 
   return (
     <div className="election-night min-h-screen bg-[linear-gradient(145deg,#dcefff_0%,#f5faff_45%,#e7f3ff_100%)] text-[#172b40]">
       <BrandHeader resultsPage />
       <AutoRefresh seconds={60} />
-      <main className="mx-auto max-w-[1680px] px-4 py-5 sm:px-6 lg:px-10">
+      <main className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 lg:px-10">
         <header className="mb-5 grid items-center gap-5 rounded-2xl border border-[#c5ddf6] border-t-4 border-t-[#0869cd] bg-white p-5 shadow-[0_6px_30px_rgba(15,35,55,0.04)] sm:grid-cols-[minmax(0,1fr)_280px] sm:p-6">
           <div>
             <p className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#005bb5]">
@@ -128,7 +108,7 @@ export default async function ResultsPage() {
             <nav className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500" aria-label="Election sections">
               <a href="#party-results" className="rounded-lg bg-[#0759b0] px-3 py-2 text-white">National result</a>
               <a href="#candidate-races-title" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">Electorate races</a>
-              <a href="#advance-summary" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">Advance voting</a>
+              <a href="#results-explained" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">What happens next</a>
             </nav>
           </div>
           <div className="rounded-xl border border-blue-200 bg-[#edf6ff] px-4 py-4">
@@ -137,32 +117,17 @@ export default async function ResultsPage() {
               <strong className="text-4xl font-bold tracking-tight tabular-nums text-[#00776f]">{showResults ? pct(results.percentPlacesCounted) : "—"}</strong>
             </div>
             <progress className="mt-2 block h-1.5 w-full" max={100} value={showResults ? results.percentPlacesCounted : 0} aria-label="Voting places reporting" />
-            <p className="mt-2 text-[10px] text-slate-400">{results.updated ? "Updated " + results.updated.split("T").pop() + " NZ time" : "Awaiting results"} · Refreshes every 60s</p>
+            <p className="mt-2 text-[10px] text-slate-400">{results.updated ? "Updated " + results.updated.replace("T", " ") + " NZ time" : "Awaiting results"} · Checks for updates every 60s</p>
           </div>
         </header>
 
-        {showResults && <ResultsTicker updated={results.updated} items={results.parties.map((party) => party.name + " · " + pct(party.percent) + " · " + party.seats + " projected seats")} />}
+        {showResults && <ResultsExplained results={results} />}
 
-        {showResults && <ElectionUpdate results={results} />}
-
-        <div className="min-w-0">
-          <div className="min-w-0">{showResults ? <NationalResults results={results} /> : <div className="mb-6"><Holding feedOk={results.ok} pollsClosed={pollsClosed} /></div>}</div>
-          <Suspense fallback={<aside className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">Loading electorate status…</aside>}>
-            <CompletedCounts />
-          </Suspense>
-        </div>
+        <div className="min-w-0">{showResults ? <NationalResults results={results} /> : <div className="mb-6"><Holding feedOk={results.ok} pollsClosed={pollsClosed} /></div>}</div>
 
         <Suspense fallback={<div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Loading electorate races…</div>}>
           <CandidateResultsPanel />
         </Suspense>
-
-        <details id="advance-summary" className="my-6 scroll-mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm font-bold">
-            <span>Advance voting</span>
-            <span className="text-xs font-normal text-slate-500">{votes.format(advanceVoting.total)} issued through {advanceVoting.date} · View comparison +</span>
-          </summary>
-          <div className="px-4 pb-4"><AdvanceVoting data={advanceVoting} /></div>
-        </details>
 
         <section className="mb-6 border-t border-slate-200 pt-5 text-[11px] leading-5 text-slate-500" aria-label="About these results">
           <p><strong className="text-slate-700">Preliminary results.</strong> The election-night count covers ordinary votes. Special votes, including overseas votes, and official checks follow. Leads and projected seats can change. Official results are expected on Friday 27 November 2026.</p>
