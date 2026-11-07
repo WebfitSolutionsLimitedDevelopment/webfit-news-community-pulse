@@ -220,7 +220,7 @@ export default async function ResultsPage() {
       <BrandHeader resultsPage />
       <AutoRefresh seconds={60} />
 
-      <main className="mx-auto max-w-[1800px] px-4 py-6 sm:px-6 sm:py-8">
+      <main className="w-full px-4 py-6 sm:px-6 sm:py-8">
         <header className="mb-5">
           <p className="text-xs font-bold uppercase tracking-widest text-[#866019]">New Zealand General Election 2026</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-5xl">Live election results</h1>
