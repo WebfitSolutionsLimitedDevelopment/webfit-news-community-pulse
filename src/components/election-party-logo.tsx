@@ -4,7 +4,7 @@ import { useState } from "react";
 
 const LOGOS: Record<string, string> = {
   "ACT": "/party-logos/ACT.jpg",
-  "Alliance": "https://elections.nz/assets/Party-logos/ALLIANCE-HR-v2__ScaleWidthWzMwMF0.jpg",
+  "Alliance": "/party-logos/Alliance.jpg",
   "Animal": "/party-logos/Animal.jpg",
   "ALCP": "/party-logos/ALCP.jpg",
   "Conservative": "/party-logos/Conservative.jpg",
@@ -13,7 +13,7 @@ const LOGOS: Record<string, string> = {
   "Outdoors": "/party-logos/Outdoors.jpg",
   "OPP": "/party-logos/OPP.jpg",
   "TPMAO": "/party-logos/TPMAO.jpg",
-  "TTTP": "https://elections.nz/assets/Party-logos/Tohu-v2__ScaleWidthWzMwMF0.jpg",
+  "TTTP": "/party-logos/TTTP.jpg",
   "GP": "/party-logos/GP.jpg",
   "NAT": "/party-logos/NAT.jpg",
   "Vision": "/party-logos/Vision.png",

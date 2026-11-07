@@ -236,7 +236,7 @@ function Results({ results }: { results: OfficialResults }) {
               <div className="mt-4"><PartyTable parties={results.parties.filter((party) => party.seats === 0 && party.percent < 1)} /></div>
             </details>
           )}
-          <p className="mt-4 text-[11px] leading-5 text-slate-500">Logos from the Electoral Commission’s party register and the NZ Loyal website. Free Palestine has a text label because its register entry has no logo.</p>
+          <p className="mt-4 text-[11px] leading-5 text-slate-500">Logos from the Electoral Commission’s party register and official party websites. Free Palestine has a text label because its register entry has no logo.</p>
         </div>
       </section>
     </>
