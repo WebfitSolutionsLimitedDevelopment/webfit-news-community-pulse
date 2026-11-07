@@ -45,7 +45,7 @@ export function ElectionVoice({ results, races }: { results: OfficialResults; ra
     if (segment===0) {
       const parties=[...r.parties].filter(p=>p.seats>0).sort((a,b)=>b.percent-a.percent);
       return "Here is the national picture. " + r.percentPlacesCounted.toFixed(1) + " percent of voting places are reporting. " +
-        parties.slice(0,4).map(p=>p.name+" is projected to have "+p.seats+" seats.").join(" ") + " These projections can still change.";
+        parties.map(p=>p.name+" is projected to have "+p.seats+" seats.").join(" ") + " These projections can still change.";
     }
     if (segment===1 && valid.length) {
       const close=[...valid].sort((a,b)=>(a.candidates[0].votes-a.candidates[1].votes)-(b.candidates[0].votes-b.candidates[1].votes));
