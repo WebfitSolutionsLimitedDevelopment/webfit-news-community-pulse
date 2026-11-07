@@ -17,6 +17,14 @@ export const metadata = {
   description: "Latest preliminary New Zealand election results, projected seats, party vote shares and electorate results. Updates from Electoral Commission data.",
 };
 const pct = (value: number) => value.toFixed(1) + "%";
+function formatResultsUpdated(value: string | null) {
+  const match=value?.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if(!match) return "Update time unavailable";
+  const [,year,month,day,hour,minute]=match;
+  const date=new Intl.DateTimeFormat("en-NZ",{day:"numeric",month:"long",timeZone:"UTC"}).format(new Date(Date.UTC(Number(year),Number(month)-1,Number(day))));
+  return date+", "+(Number(hour)%12 || 12)+":"+minute+" "+(Number(hour)>=12 ? "pm" : "am")+" NZ time";
+}
+
 function Holding({ feedOk, pollsClosed }: { feedOk: boolean; pollsClosed: boolean }) {
   return (
     <section aria-labelledby="count-status" className="rounded-lg border border-[#dce4ef] border-l-4 border-l-[#2563eb] bg-white px-4 py-3 sm:px-5">
@@ -72,11 +80,7 @@ function ResultsExplained({ results }: { results: Awaited<ReturnType<typeof load
         <p className="mt-2 text-xs leading-5 text-slate-600">Scheduled declaration of official results. Special votes, including overseas votes, are checked and counted before the official result.</p>
       </article>
     </div>
-    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">
-      <strong className="text-[#063d7e]">How to tell if anything has changed</strong>
-      <p className="mt-1">Commission feed timestamp: <strong>{results.updated?.replace("T"," ") || "Unavailable"} NZ time</strong>. The page checks every 60 seconds. A refresh does not mean new votes have been added. If this timestamp stays the same, the Commission has not supplied a newer national snapshot.</p>
-      <p className="mt-1">Each electorate can have its own update time. Open a race below to see its timestamp and source.</p>
-    </div>
+    <p className="mt-4 text-xs leading-5 text-slate-500">Results last updated: <strong className="font-semibold text-slate-700">{formatResultsUpdated(results.updated)}</strong>. Results remain preliminary.</p>
     <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-[#005bb5]">
       <a className="underline" href={RESULTS_SOURCE_URL} target="_blank" rel="noopener noreferrer">Verify the results · Electoral Commission</a>
       <a className="underline" href="https://vote.nz/2026-general-election/about/overview/what-happens-after-the-election" target="_blank" rel="noopener noreferrer">How preliminary results become official</a>
