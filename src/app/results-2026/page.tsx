@@ -1,3 +1,4 @@
+import { ElectionVoice } from "@/components/election-voice";
 import { ElectionUpdate } from "@/components/election-update";
 import { LiveViewers } from "@/components/live-viewers";
 import { Suspense } from "react";
@@ -114,6 +115,7 @@ export default async function ResultsPage() {
             <p className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#00776f]">
               <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Election night live
               <LiveViewers />
+              <ElectionVoice results={results} />
             </p>
             <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">Election 2026</h1>
             <p className="mt-2 text-sm text-slate-500">The national picture. The local contests. Every update.</p>
