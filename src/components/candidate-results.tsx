@@ -13,6 +13,41 @@ function displayName(name: string) {
 }
 
 
+
+function ClosestRaces({ races, onSelect }: { races: ElectorateRace[]; onSelect: (name: string) => void }) {
+  const closest = races.filter(race => race.validVotes > 0 && race.candidates.length > 1)
+    .sort((a,b) => (a.candidates[0].votes - a.candidates[1].votes) - (b.candidates[0].votes - b.candidates[1].votes) || a.name.localeCompare(b.name))
+    .slice(0,3);
+  if (!closest.length) return null;
+  return (
+    <section className="mb-6 rounded-[24px] border border-amber-200 bg-[#fffbf2] p-5 sm:p-7" aria-labelledby="closest-races-title">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#936020]">Seats to watch</p><h2 id="closest-races-title" className="mt-1 text-xl font-bold">Closest races right now</h2></div>
+        <p className="max-w-md text-xs leading-5 text-slate-500">Smallest vote margins across available feeds. These are current leads, not declared results.</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {closest.map(race => {
+          const [leader, runner] = race.candidates;
+          const margin = leader.votes - runner.votes;
+          return (
+            <button key={race.id} type="button" onClick={() => onSelect(race.name)} className="min-w-0 rounded-xl border border-amber-100 bg-white p-4 text-left transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-[#00776f]" aria-label={"Explore " + race.name + ", " + number.format(margin) + " vote margin"}>
+              <div className="flex items-start justify-between gap-3"><h3 className="text-sm font-bold">{race.name}</h3><div className="shrink-0 text-right"><strong className="text-2xl font-bold tabular-nums text-[#936020]">{number.format(margin)}</strong><p className="text-[10px] font-semibold text-slate-500">{margin === 0 ? "votes · tied" : "vote lead"}</p></div></div>
+              <div className="mt-3 space-y-3">
+                {[leader, runner].map((candidate,index) => <div key={candidate.id}>
+                  <div className="flex items-center gap-2"><PartyLogo name={candidate.party} compact /><div className="min-w-0 flex-1"><p className="text-xs font-bold">{displayName(candidate.name)}</p><p className="text-[10px] text-slate-500">{candidate.party}</p></div><strong className="shrink-0 text-sm tabular-nums">{number.format(candidate.votes)}</strong></div>
+                  <div className="mt-1.5 h-1 rounded-full bg-slate-100" aria-hidden><div className="h-full rounded-full" style={{width: (candidate.votes / race.validVotes * 100) + "%",background:partyColour(candidate.party)}} /></div>
+                  <span className="sr-only">{index === 0 ? "Current leader" : "Second place"} · {(candidate.votes / race.validVotes * 100).toFixed(1)}% of valid candidate votes</span>
+                </div>)}
+              </div>
+              <div className="mt-4 flex justify-between gap-2 border-t border-slate-100 pt-3 text-[10px]"><span className="text-slate-500">{race.reporting.toFixed(1)}% of voting places reporting</span><span className="font-bold text-[#00776f]">Explore race →</span></div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function ElectorateParade({ races }: { races: ElectorateRace[] }) {
   const [paused, setPaused] = useState(false);
   const ordered = [...races].sort((a, b) => a.name.localeCompare(b.name, "en-NZ", { sensitivity: "base" }));
@@ -97,6 +132,7 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
 
   return (
     <>
+    <ClosestRaces races={races} onSelect={(name) => { setQuery(name); setPage(0); panel.current?.scrollIntoView({ block: "start" }); }} />
     <ElectorateParade races={races} />
     <section ref={panel} className="mb-6 scroll-mt-5 rounded-[24px] border border-slate-200 bg-white p-5 sm:p-7" aria-labelledby="candidate-races-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
