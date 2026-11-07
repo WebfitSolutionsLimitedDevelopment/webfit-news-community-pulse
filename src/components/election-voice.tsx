@@ -83,7 +83,7 @@ export function ElectionVoice({ results, races }: { results: OfficialResults; ra
     setCaption(text);
     const generation=++playback.current;
     // Short sentences give browser voices breathing room and avoid long-utterance stalls.
-    const sentences=text.match(/[^.!?]+(?:[.!?](?=\s|$)|$)/g) || [text];
+    const sentences=text.split(/(?<=[.!?])\s+/).filter(Boolean);
     const available=window.speechSynthesis.getVoices().filter(v=>v.lang.startsWith("en")).sort((a,b)=>voiceScore(b)-voiceScore(a));
     const voice=available.find(v=>v.voiceURI===chosenVoice.current) || available[0];
     let position=0;
