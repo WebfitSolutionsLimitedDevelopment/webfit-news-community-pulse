@@ -1,36 +1,21 @@
-import { PartyLogo } from "@/components/election-party-logo";
-import { partyColour } from "@/lib/result-colours";
 import { Suspense } from "react";
+import { NationalResults } from "@/components/national-election-results";
 import { CandidateResults } from "@/components/candidate-results";
 import { loadCandidateRaces } from "@/lib/candidate-results";
 import { ResultsTicker } from "@/components/results-ticker";
 import { ADVANCE_SOURCE, POLLS_CLOSE, loadAdvanceVoting } from "@/lib/advance-voting";
-import { Clock, ExternalLink, Landmark } from "lucide-react";
+import { Clock, ExternalLink } from "lucide-react";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BrandHeader } from "@/components/brand-header";
 import { SiteFooter } from "@/components/site-footer";
-import { BLOC_META } from "@/components/coalition-charts";
-import type { BlocKey } from "@/lib/coalition-data";
-import { RESULTS_SOURCE_URL, loadOfficialResults, type OfficialResults } from "@/lib/official-results";
+import { RESULTS_SOURCE_URL, loadOfficialResults } from "@/lib/official-results";
 
-// Rebuild at most once a minute; the official feed itself updates as results are entered.
 export const revalidate = 60;
-
 export const metadata = {
-  title: "2026 Election Results Live | Webfit News",
-  description:
-    "Live official results of the 2026 New Zealand General Election: party vote, seats and how close each bloc is to a majority.",
+  title: "NZ Election 2026 Live Results | Webfit News",
+  description: "Live New Zealand election results, projected seats, party vote shares and every electorate race. Electoral Commission data.",
 };
-
-const RESULT_BLOCS = {
-  government: { ...BLOC_META.government, colour: "#2266c7", heroColour: "#164894", soft: "#ffffff" },
-  opposition: { ...BLOC_META.opposition, colour: "#c52c43", heroColour: "#a52439", soft: "#ffffff" },
-  other: { ...BLOC_META.other, colour: "#64748b", heroColour: "#475569", soft: "#ffffff" },
-};
-
-const BLOC_ORDER: BlocKey[] = ["government", "other", "opposition"];
-const pct = (v: number) => `${v.toFixed(1)}%`;
-
+const pct = (value: number) => value.toFixed(1) + "%";
 const votes = new Intl.NumberFormat("en-NZ");
 
 function AdvanceVoting({ data }: { data: Awaited<ReturnType<typeof loadAdvanceVoting>> }) {
@@ -106,235 +91,71 @@ function Holding({ feedOk, pollsClosed }: { feedOk: boolean; pollsClosed: boolea
   );
 }
 
-/** Stacked seat bar with the majority line. */
-function SeatBar({ results }: { results: OfficialResults }) {
-  const total = Math.max(results.totalSeats, 1);
-  const majorityAt = (results.majority / total) * 100;
-  return (
-    <div>
-      <div className="relative">
-        <div className="flex h-8 overflow-hidden rounded-lg bg-[#e2e8f0]">
-          {BLOC_ORDER.map((bloc) => {
-            const seats = results.blocs[bloc].seats;
-            if (seats <= 0) return null;
-            return (
-              <div
-                key={bloc}
-                className="flex items-center justify-center text-sm font-bold text-white"
-                style={{ width: `${(seats / total) * 100}%`, background: RESULT_BLOCS[bloc].colour }}
-                title={`${RESULT_BLOCS[bloc].short}: ${seats} seats`}
-              >
-                {seats >= 6 ? seats : ""}
-              </div>
-            );
-          })}
-        </div>
-        <div className="absolute -top-2 -bottom-2 w-0.5 bg-neutral-900" style={{ left: `${majorityAt}%` }} aria-hidden />
-      </div>
-      <p className="mt-3 text-center text-xs font-semibold text-neutral-600">
-        Majority line · {results.majority} of {results.totalSeats} projected seats
-      </p>
-    </div>
-  );
-}
-
-function PartyTable({ parties }: { parties: OfficialResults["parties"] }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            <th className="pb-3 pr-3">Party</th>
-            <th className="pb-3 pr-3 text-right">Vote share</th>
-            <th className="pb-3 text-right">Seats</th>
-          </tr>
-        </thead>
-        <tbody>
-          {parties.map((party) => (
-            <tr key={party.abbrev} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
-              <td className="py-4 pr-3">
-                <div className="flex items-center gap-3">
-                  <PartyLogo name={party.name} />
-                  <div className="min-w-[100px] flex-1">
-                    <p className="text-sm font-bold text-[#10213b] sm:text-base">{party.name}</p>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden>
-                      <div className="h-full rounded-full" style={{ width: pct(party.percent), background: partyColour(party.abbrev) }} />
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td className="py-4 pr-3 text-right align-middle">
-                <span className="text-lg font-bold tabular-nums text-[#10213b] sm:text-2xl">{pct(party.percent)}</span>
-              </td>
-              <td className="py-4 text-right align-middle">
-                <span className="inline-flex min-w-10 justify-center rounded-lg bg-slate-100 px-2 py-1 text-xl font-bold tabular-nums text-[#10213b]">{party.seats}</span>
-                <p className="mt-1 hidden whitespace-nowrap text-[10px] text-slate-500 sm:block">{party.electorateSeats} electorate · {party.listSeats} list</p>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function NationalSummary({ results }: { results: OfficialResults }) {
-  const gov = results.blocs.government.seats;
-  const opp = results.blocs.opposition.seats;
-  const headline = gov >= results.majority
-    ? "Government parties currently have a projected majority"
-    : opp >= results.majority
-      ? "Opposition parties currently have a projected majority"
-      : "No bloc currently has a projected majority";
-
-  return (
-    <section id="national-overview" className="mb-6 grid gap-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[0.9fr_1.1fr] lg:gap-10 lg:p-6" aria-label="National election overview">
-      <div className="flex flex-col justify-between gap-4">
-        <div>
-          <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700"><Landmark size={14} aria-hidden /> National overview</p>
-          <h2 className="mt-2 max-w-xl text-xl font-bold leading-snug tracking-tight sm:text-2xl">{headline}</h2>
-        </div>
-        <div>
-          <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="text-slate-600">Voting places reporting</span>
-            <strong className="text-lg tabular-nums">{pct(results.percentPlacesCounted)}</strong>
-          </div>
-          <progress className="mt-2 block h-1.5 w-full" max={100} value={results.percentPlacesCounted} aria-label="Voting places counted" />
-        </div>
-      </div>
-      <div>
-        <div className="mb-5 grid grid-cols-3 gap-4">
-          {BLOC_ORDER.map((bloc) => (
-            <div key={bloc}>
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-600"><span className="h-2 w-2 rounded-full" style={{background: RESULT_BLOCS[bloc].colour}} aria-hidden />{RESULT_BLOCS[bloc].short}</p>
-              <p className="mt-1 text-3xl font-bold tabular-nums" style={{color: RESULT_BLOCS[bloc].heroColour}}>{results.blocs[bloc].seats}<span className="ml-1 text-xs font-normal text-slate-500">seats</span></p>
-              <p className="mt-1 text-[11px] leading-4 text-slate-500">{RESULT_BLOCS[bloc].parties}</p>
-            </div>
-          ))}
-        </div>
-        {results.totalSeats > 0 && <SeatBar results={results} />}
-      </div>
-    </section>
-  );
-}
-
-function Results({ results }: { results: OfficialResults }) {
-  return (
-    <>
-      <section id="party-results" className="scroll-mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">The party vote</p>
-            <h2 className="mt-1 text-xl font-bold">Party standings</h2>
-          </div>
-          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">Preliminary</span>
-        </div>
-        <div className="p-5 sm:p-6">
-          <PartyTable parties={results.parties.filter((party) => party.seats > 0 || party.percent >= 1)} />
-          {results.parties.some((party) => party.seats === 0 && party.percent < 1) && (
-            <details className="mt-4 rounded-xl border border-slate-200 px-4 py-3">
-              <summary className="cursor-pointer text-sm font-bold text-blue-700">View all other parties ({results.parties.filter((party) => party.seats === 0 && party.percent < 1).length})</summary>
-              <div className="mt-4"><PartyTable parties={results.parties.filter((party) => party.seats === 0 && party.percent < 1)} /></div>
-            </details>
-          )}
-          <p className="mt-4 text-[11px] leading-5 text-slate-500">Logos from the Electoral Commission’s party register and official party websites. Free Palestine has a text label because its register entry has no logo.</p>
-        </div>
-      </section>
-    </>
-  );
-}
-
 async function CandidateResultsPanel() {
   const races = await loadCandidateRaces();
   return <CandidateResults races={races} />;
 }
 
 export default async function ResultsPage() {
-  // Server render: reevaluate the election-night cutoff whenever the page is regenerated.
   // eslint-disable-next-line react-hooks/purity
   const pollsClosed = Date.now() >= POLLS_CLOSE;
   const [results, advanceVoting] = await Promise.all([loadOfficialResults(), loadAdvanceVoting()]);
   const showResults = pollsClosed && results.hasResults;
 
   return (
-    <div className="election-night min-h-screen bg-[#f3f6fa] text-[#10213b]">
+    <div className="election-night min-h-screen bg-[#f4f7f8] text-[#172b40]">
       <BrandHeader resultsPage />
       <AutoRefresh seconds={60} />
-
-      <main className="mx-auto w-full max-w-[1920px] px-4 py-5 sm:px-6 lg:px-8">
-        <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
+      <main className="mx-auto max-w-[1680px] px-4 py-5 sm:px-6 lg:px-10">
+        <header className="mb-5 grid items-center gap-5 sm:grid-cols-[minmax(0,1fr)_280px]">
           <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">New Zealand · Election 2026</p>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800"><span className="h-1.5 w-1.5 rounded-full bg-emerald-600" aria-hidden />{showResults ? "Preliminary count" : "Election coverage"}</span>
-            </div>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Election night, at a glance</h1>
-            <p className="mt-1.5 text-sm text-slate-500">Party vote, projected seats and the races that matter.</p>
+            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#00776f]">
+              <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Preliminary results
+            </p>
+            <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">Election 2026</h1>
+            <nav className="mt-3 flex flex-wrap gap-5 text-xs font-semibold text-slate-500" aria-label="Election sections">
+              <a href="#party-results" className="border-b-2 border-[#00776f] pb-1 text-[#00776f]">National result</a>
+              <a href="#candidate-races-title" className="pb-1 hover:text-[#00776f]">Electorate races</a>
+              <a href="#advance-summary" className="pb-1 hover:text-[#00776f]">Advance voting</a>
+            </nav>
           </div>
-          <nav className="flex flex-wrap gap-2 text-xs font-semibold" aria-label="Election sections">
-            <a href="#party-results" className="rounded-full border border-slate-300 bg-white px-4 py-2 hover:border-blue-500 hover:text-blue-700">Party results</a>
-            <a href="#candidate-races-title" className="rounded-full border border-slate-300 bg-white px-4 py-2 hover:border-blue-500 hover:text-blue-700">Find your electorate</a>
-            <a href="#advance-voting" className="rounded-full border border-slate-300 bg-white px-4 py-2 hover:border-blue-500 hover:text-blue-700">Advance voting</a>
-          </nav>
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-xs font-semibold text-slate-500">Voting places reporting</p>
+              <strong className="text-2xl font-bold tabular-nums text-[#00776f]">{showResults ? pct(results.percentPlacesCounted) : "—"}</strong>
+            </div>
+            <progress className="mt-2 block h-1.5 w-full" max={100} value={showResults ? results.percentPlacesCounted : 0} aria-label="Voting places reporting" />
+            <p className="mt-2 text-[10px] text-slate-400">{results.updated ? "Feed " + results.updated.replace("T", " ") + " NZ time" : "Awaiting feed"} · Refreshes every 60s</p>
+          </div>
         </header>
 
-        {showResults && <ResultsTicker
-          updated={results.updated}
-          items={results.parties.map((party) => party.name + " · " + pct(party.percent) + " party vote · " + party.seats + " projected seats")}
-        />}
-        {showResults && <NationalSummary results={results} />}
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="min-w-0">
-        <div className="space-y-4">
-          {showResults ? <Results results={results} /> : <Holding feedOk={results.ok} pollsClosed={pollsClosed} />}
+        {showResults && <ResultsTicker updated={results.updated} items={results.parties.map((party) => party.name + " · " + pct(party.percent) + " · " + party.seats + " projected seats")} />}
 
-          <AdvanceVoting data={advanceVoting} />
+        {showResults ? <NationalResults results={results} /> : <div className="mb-6"><Holding feedOk={results.ok} pollsClosed={pollsClosed} /></div>}
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[#dce4ef] pb-4 text-sm">
-            <a href={RESULTS_SOURCE_URL} className="inline-flex items-center gap-1 font-semibold text-[#1d4ed8] underline">
-              Electorate results <ExternalLink size={14} aria-hidden />
-            </a>
-            {!pollsClosed && <span className="text-neutral-600">
-              Saturday voting hours: 9 am to 7 pm.{" "}
-              <a href="https://vote.nz" className="font-semibold text-[#1d4ed8] underline">Find a voting place</a>
-            </span>}
-          </div>
-        </div>
+        <Suspense fallback={<div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Loading electorate races…</div>}>
+          <CandidateResultsPanel />
+        </Suspense>
 
-        <section className="mt-4 text-sm leading-6 text-neutral-600" aria-label="About the preliminary count">
-          <p>
-            <strong className="text-neutral-800">About election-night results.</strong> The election-night count covers
-            ordinary votes only. Special votes, including overseas votes, are counted afterwards, and seats can change.
-            The Electoral Commission expects to declare the official result on Friday 27 November 2026.
-          </p>
-          <p className="mt-3">
-            Government bloc: National, ACT and NZ First. Opposition bloc: Labour, Green and Te Pāti Māori. Groupings
-            are for comparison only and are not a statement about any coalition talks.
-          </p>
-          <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span>
-              Source: Electoral Commission
-              {showResults && results.updated ? ` · feed updated ${results.updated.replace("T", " ")} NZ time` : ""}
-            </span>
-            <a href={RESULTS_SOURCE_URL} target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-semibold text-[#1d4ed8]">
-              electionresults.govt.nz <ExternalLink size={13} />
-            </a>
-          </p>
+        <details id="advance-summary" className="my-6 scroll-mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm font-bold">
+            <span>Advance voting</span>
+            <span className="text-xs font-normal text-slate-500">{votes.format(advanceVoting.total)} issued through {advanceVoting.date} · View comparison +</span>
+          </summary>
+          <div className="px-4 pb-4"><AdvanceVoting data={advanceVoting} /></div>
+        </details>
+
+        <section className="mb-6 border-t border-slate-200 pt-5 text-[11px] leading-5 text-slate-500" aria-label="About these results">
+          <p><strong className="text-slate-700">Preliminary results.</strong> Ordinary votes are counted on election night. Special votes, including overseas votes, are counted afterwards. Leads and projected seats can change. Official results are expected on Friday 27 November 2026.</p>
+          <p className="mt-2">Government grouping · National, ACT and NZ First. Opposition grouping · Labour, Green and Te Pāti Māori. Groupings are comparisons and do not confirm coalition agreements.</p>
+          <a href={RESULTS_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold text-[#00776f] underline">Source Electoral Commission <ExternalLink size={12} aria-hidden /></a>
         </section>
-          </div>
-          <aside className="min-w-0" aria-label="Candidate and electorate results">
-            <Suspense fallback={<div className="rounded-xl border border-[#dce4ef] bg-white p-5 text-sm text-neutral-600">Loading candidate and electorate results…</div>}>
-              <CandidateResultsPanel />
-            </Suspense>
-          </aside>
-        </div>
       </main>
-
       <style>{`
-        .election-night progress { appearance: none; border: 0; border-radius: 99px; overflow: hidden; background: #e2e8f0; color: #2563eb; }
-        .election-night progress::-webkit-progress-bar { background: #e2e8f0; border-radius: 99px; }
-        .election-night progress::-webkit-progress-value { background: #2563eb; border-radius: 99px; }
-        .election-night progress::-moz-progress-bar { background: #2563eb; border-radius: 99px; }
+        .election-night progress { appearance: none; border: 0; border-radius: 99px; overflow: hidden; background: #e5ecef; color: #008577; }
+        .election-night progress::-webkit-progress-bar { background: #e5ecef; border-radius: 99px; }
+        .election-night progress::-webkit-progress-value { background: #008577; border-radius: 99px; }
+        .election-night progress::-moz-progress-bar { background: #008577; border-radius: 99px; }
       `}</style>
       <SiteFooter />
     </div>
