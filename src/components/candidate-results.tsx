@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ResultsTicker } from "@/components/results-ticker";
 import type { ElectorateRace } from "@/lib/candidate-results";
 
 const FEATURED = ["SEYMOUR, David", "LUXON, Christopher", "HIPKINS, Chris", "SWARBRICK, Chlöe", "NGAREWA-PACKER, Debbie", "WAITITI, Rawiri"];
@@ -21,10 +22,21 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
   });
 
   return (
-    <section className="mt-5 rounded-xl border border-[#e3ded5] bg-white p-4 sm:p-5" aria-labelledby="candidate-races-title">
+    <section className="rounded-xl border border-[#e3ded5] bg-white p-4 sm:p-5" aria-labelledby="candidate-races-title">
       <p className="text-xs font-bold uppercase tracking-widest text-[#7b1025]">Electorate watch</p>
       <h2 id="candidate-races-title" className="mt-1 text-xl font-semibold">Candidates and key races</h2>
       <p className="mt-2 text-sm leading-6 text-neutral-600">Preliminary candidate votes, current margins and voting places reporting. Expand a race for every candidate.</p>
+      <div className="mt-4">
+        <ResultsTicker
+          label="Key races"
+          updated={races.map((race) => race.updated).filter((time): time is string => Boolean(time)).sort().at(-1) ?? null}
+          items={races.filter((race) => race.validVotes > 0 && race.candidates.some((candidate) => FEATURED.includes(candidate.name))).map((race) => {
+            const leader = race.candidates[0];
+            const margin = leader.votes - (race.candidates[1]?.votes ?? 0);
+            return race.name + " · " + displayName(leader.name) + " · " + number.format(leader.votes) + " votes · " + (margin > 0 ? "lead " + number.format(margin) : "tied");
+          })}
+        />
+      </div>
       <label className="mt-4 block text-sm font-semibold" htmlFor="candidate-search">Find a candidate or electorate</label>
       <input id="candidate-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try Seymour, Epsom or your electorate" className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:outline-2 focus:outline-[#7b1025]" />
       <button type="button" onClick={() => setShowAll(!showAll)} aria-pressed={showAll} className="my-3 rounded-full border border-[#7b1025] px-3 py-1.5 text-sm font-semibold text-[#7b1025]">
