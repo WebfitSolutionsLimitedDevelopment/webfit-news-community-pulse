@@ -145,7 +145,7 @@ export function parseResults(electionXml: string, partiesXml: string): OfficialR
   };
 }
 
-async function getXml(file: string) {
+export async function getXml(file: string) {
   const res = await fetch(RESULTS_FEED_URL + file, {
     headers: { Accept: "application/xml,text/xml", "User-Agent": "WebfitNews-Results/1.0 (+https://poll.webfitnews.co.nz)" },
     next: { revalidate: 60 },
