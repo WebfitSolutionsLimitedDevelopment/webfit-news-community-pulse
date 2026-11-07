@@ -95,6 +95,11 @@ function Holding({ feedOk, pollsClosed }: { feedOk: boolean; pollsClosed: boolea
   );
 }
 
+async function VoiceCommentary({ results }: { results: Awaited<ReturnType<typeof loadOfficialResults>> }) {
+  const races = await loadCandidateRaces();
+  return <ElectionVoice results={results} races={races} />;
+}
+
 async function CandidateResultsPanel() {
   const races = await loadCandidateRaces();
   return <CandidateResults races={races} />;
@@ -116,7 +121,7 @@ export default async function ResultsPage() {
             <p className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#005bb5]">
               <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Election night live
               <LiveViewers />
-              <ElectionVoice results={results} />
+              <Suspense fallback={null}><VoiceCommentary results={results} /></Suspense>
             </p>
             <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] text-[#063d7e] sm:text-5xl">Election 2026</h1>
             <p className="mt-2 text-sm text-slate-500">The national picture. The local contests. Every update.</p>
