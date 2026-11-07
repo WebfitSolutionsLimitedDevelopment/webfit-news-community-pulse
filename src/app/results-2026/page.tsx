@@ -107,26 +107,26 @@ export default async function ResultsPage() {
   const showResults = pollsClosed && results.hasResults;
 
   return (
-    <div className="election-night min-h-screen bg-[linear-gradient(180deg,#eaf3f2_0px,#f4f7f8_620px)] text-[#172b40]">
+    <div className="election-night min-h-screen bg-[linear-gradient(145deg,#dcefff_0%,#f5faff_45%,#e7f3ff_100%)] text-[#172b40]">
       <BrandHeader resultsPage />
       <AutoRefresh seconds={60} />
       <main className="mx-auto max-w-[1680px] px-4 py-5 sm:px-6 lg:px-10">
-        <header className="mb-5 grid items-center gap-5 rounded-2xl border border-white bg-white/70 p-5 shadow-[0_6px_30px_rgba(15,35,55,0.04)] sm:grid-cols-[minmax(0,1fr)_280px] sm:p-6">
+        <header className="mb-5 grid items-center gap-5 rounded-2xl border border-[#c5ddf6] border-t-4 border-t-[#0869cd] bg-white p-5 shadow-[0_6px_30px_rgba(15,35,55,0.04)] sm:grid-cols-[minmax(0,1fr)_280px] sm:p-6">
           <div>
-            <p className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#00776f]">
+            <p className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#005bb5]">
               <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Election night live
               <LiveViewers />
               <ElectionVoice results={results} />
             </p>
-            <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">Election 2026</h1>
+            <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] text-[#063d7e] sm:text-5xl">Election 2026</h1>
             <p className="mt-2 text-sm text-slate-500">The national picture. The local contests. Every update.</p>
             <nav className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500" aria-label="Election sections">
-              <a href="#party-results" className="rounded-lg bg-[#00776f] px-3 py-2 text-white">National result</a>
+              <a href="#party-results" className="rounded-lg bg-[#0759b0] px-3 py-2 text-white">National result</a>
               <a href="#candidate-races-title" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">Electorate races</a>
               <a href="#advance-summary" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">Advance voting</a>
             </nav>
           </div>
-          <div className="rounded-xl border border-teal-100 bg-[#f1f9f6] px-4 py-4">
+          <div className="rounded-xl border border-blue-200 bg-[#edf6ff] px-4 py-4">
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-xs font-semibold text-slate-500">Voting places reporting</p>
               <strong className="text-4xl font-bold tracking-tight tabular-nums text-[#00776f]">{showResults ? pct(results.percentPlacesCounted) : "—"}</strong>
@@ -166,10 +166,10 @@ export default async function ResultsPage() {
         </section>
       </main>
       <style>{`
-        .election-night progress { appearance: none; border: 0; border-radius: 99px; overflow: hidden; background: #e5ecef; color: #008577; }
-        .election-night progress::-webkit-progress-bar { background: #e5ecef; border-radius: 99px; }
-        .election-night progress::-webkit-progress-value { background: #008577; border-radius: 99px; }
-        .election-night progress::-moz-progress-bar { background: #008577; border-radius: 99px; }
+        .election-night progress { appearance: none; border: 0; border-radius: 99px; overflow: hidden; background: #d9e9f8; color: #087ee3; }
+        .election-night progress::-webkit-progress-bar { background: #d9e9f8; border-radius: 99px; }
+        .election-night progress::-webkit-progress-value { background: #087ee3; border-radius: 99px; }
+        .election-night progress::-moz-progress-bar { background: #087ee3; border-radius: 99px; }
       `}</style>
       <SiteFooter />
     </div>
