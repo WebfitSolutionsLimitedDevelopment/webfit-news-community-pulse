@@ -105,30 +105,31 @@ export default async function ResultsPage() {
   const showResults = pollsClosed && results.hasResults;
 
   return (
-    <div className="election-night min-h-screen bg-[#f4f7f8] text-[#172b40]">
+    <div className="election-night min-h-screen bg-[linear-gradient(180deg,#eaf3f2_0px,#f4f7f8_620px)] text-[#172b40]">
       <BrandHeader resultsPage />
       <AutoRefresh seconds={60} />
       <main className="mx-auto max-w-[1680px] px-4 py-5 sm:px-6 lg:px-10">
-        <header className="mb-5 grid items-center gap-5 sm:grid-cols-[minmax(0,1fr)_280px]">
+        <header className="mb-5 grid items-center gap-5 rounded-2xl border border-white bg-white/70 p-5 shadow-[0_6px_30px_rgba(15,35,55,0.04)] sm:grid-cols-[minmax(0,1fr)_280px] sm:p-6">
           <div>
             <p className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#00776f]">
-              <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Preliminary results
+              <span className="h-2 w-2 rounded-full bg-[#00a28f]" aria-hidden /> New Zealand · Election night live
               <LiveViewers />
             </p>
             <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] sm:text-5xl">Election 2026</h1>
-            <nav className="mt-3 flex flex-wrap gap-5 text-xs font-semibold text-slate-500" aria-label="Election sections">
-              <a href="#party-results" className="border-b-2 border-[#00776f] pb-1 text-[#00776f]">National result</a>
-              <a href="#candidate-races-title" className="pb-1 hover:text-[#00776f]">Electorate races</a>
-              <a href="#advance-summary" className="pb-1 hover:text-[#00776f]">Advance voting</a>
+            <p className="mt-2 text-sm text-slate-500">The national picture. The local contests. Every update.</p>
+            <nav className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500" aria-label="Election sections">
+              <a href="#party-results" className="rounded-lg bg-[#00776f] px-3 py-2 text-white">National result</a>
+              <a href="#candidate-races-title" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">Electorate races</a>
+              <a href="#advance-summary" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">Advance voting</a>
             </nav>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+          <div className="rounded-xl border border-teal-100 bg-[#f1f9f6] px-4 py-4">
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-xs font-semibold text-slate-500">Voting places reporting</p>
-              <strong className="text-2xl font-bold tabular-nums text-[#00776f]">{showResults ? pct(results.percentPlacesCounted) : "—"}</strong>
+              <strong className="text-4xl font-bold tracking-tight tabular-nums text-[#00776f]">{showResults ? pct(results.percentPlacesCounted) : "—"}</strong>
             </div>
             <progress className="mt-2 block h-1.5 w-full" max={100} value={showResults ? results.percentPlacesCounted : 0} aria-label="Voting places reporting" />
-            <p className="mt-2 text-[10px] text-slate-400">{results.updated ? "Feed " + results.updated.replace("T", " ") + " NZ time" : "Awaiting feed"} · Refreshes every 60s</p>
+            <p className="mt-2 text-[10px] text-slate-400">{results.updated ? "Updated " + results.updated.split("T").pop() + " NZ time" : "Awaiting results"} · Refreshes every 60s</p>
           </div>
         </header>
 
