@@ -1,3 +1,4 @@
+import { CompletedCounts } from "@/components/completed-counts";
 import { ElectionVoice } from "@/components/election-voice";
 import { ElectionUpdate } from "@/components/election-update";
 import { LiveViewers } from "@/components/live-viewers";
@@ -139,7 +140,12 @@ export default async function ResultsPage() {
 
         {showResults && <ElectionUpdate results={results} />}
 
-        {showResults ? <NationalResults results={results} /> : <div className="mb-6"><Holding feedOk={results.ok} pollsClosed={pollsClosed} /></div>}
+        <div className="grid min-w-0 items-start gap-5 min-[1600px]:grid-cols-[minmax(0,1fr)_310px]">
+          <div className="min-w-0">{showResults ? <NationalResults results={results} /> : <div className="mb-6"><Holding feedOk={results.ok} pollsClosed={pollsClosed} /></div>}</div>
+          <Suspense fallback={<aside className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">Loading electorate status…</aside>}>
+            <CompletedCounts />
+          </Suspense>
+        </div>
 
         <Suspense fallback={<div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">Loading electorate races…</div>}>
           <CandidateResultsPanel />
