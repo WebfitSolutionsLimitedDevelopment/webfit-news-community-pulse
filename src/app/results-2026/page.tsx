@@ -1,3 +1,4 @@
+import { PartyLogo } from "@/components/party-logo";
 import { partyColour } from "@/lib/result-colours";
 import { Suspense } from "react";
 import { CandidateResults } from "@/components/candidate-results";
@@ -137,6 +138,46 @@ function SeatBar({ results }: { results: OfficialResults }) {
   );
 }
 
+function PartyTable({ parties }: { parties: OfficialResults["parties"] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left">
+        <thead>
+          <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <th className="pb-3 pr-3">Party</th>
+            <th className="pb-3 pr-3 text-right">Vote share</th>
+            <th className="pb-3 text-right">Seats</th>
+          </tr>
+        </thead>
+        <tbody>
+          {parties.map((party) => (
+            <tr key={party.abbrev} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
+              <td className="py-4 pr-3">
+                <div className="flex items-center gap-3">
+                  <PartyLogo name={party.name} />
+                  <div className="min-w-[100px] flex-1">
+                    <p className="text-sm font-bold text-[#10213b] sm:text-base">{party.name}</p>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden>
+                      <div className="h-full rounded-full" style={{ width: pct(party.percent), background: partyColour(party.abbrev) }} />
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td className="py-4 pr-3 text-right align-middle">
+                <span className="text-lg font-bold tabular-nums text-[#10213b] sm:text-2xl">{pct(party.percent)}</span>
+              </td>
+              <td className="py-4 text-right align-middle">
+                <span className="inline-flex min-w-10 justify-center rounded-lg bg-slate-100 px-2 py-1 text-xl font-bold tabular-nums text-[#10213b]">{party.seats}</span>
+                <p className="mt-1 whitespace-nowrap text-[10px] text-slate-500">{party.electorateSeats} electorate · {party.listSeats} list</p>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function Results({ results }: { results: OfficialResults }) {
   const gov = results.blocs.government.seats;
   const opp = results.blocs.opposition.seats;
@@ -156,7 +197,7 @@ function Results({ results }: { results: OfficialResults }) {
             <Landmark size={15} /> {counting ? "Counting under way" : "Election-night count complete"} ·{" "}
             {pct(results.percentPlacesCounted)} of voting places counted
           </p>
-          <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">{headline}</h2>
+          <h2 className="mt-3 text-xl font-bold tracking-tight sm:text-2xl">{headline}</h2>
           <progress className="mt-4 block h-2 w-full accent-[#2563eb]" max={100} value={results.percentPlacesCounted} aria-label="Voting places counted" />
 
           <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
@@ -179,39 +220,23 @@ function Results({ results }: { results: OfficialResults }) {
         </div>
       </section>
 
-      <section className="rounded-xl border border-[#dce4ef] bg-white p-5 sm:p-7">
-        <h2 className="text-xl font-semibold">Party vote and seats</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-black/10 text-xs uppercase tracking-[0.08em] text-neutral-500">
-                <th className="py-2 pr-3 font-semibold">Party</th>
-                <th className="py-2 pr-3 text-right font-semibold">Party vote</th>
-                <th className="hidden py-2 pr-3 text-right font-semibold sm:table-cell">Electorate seats</th>
-                <th className="hidden py-2 pr-3 text-right font-semibold sm:table-cell">List seats</th>
-                <th className="py-2 text-right font-semibold"><span className="sm:hidden">Seats</span><span className="hidden sm:inline">Total seats</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.parties.map((p) => (
-                <tr key={p.abbrev} className="border-b border-slate-100 transition-colors hover:bg-blue-50/60">
-                  <td className="py-3 pr-3 font-semibold">
-                    <span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: partyColour(p.abbrev) }} />
-                    {p.name}
-                  </td>
-                  <td className="py-2.5 pr-3 text-right tabular-nums">
-                    {pct(p.percent)}
-                    <div className="ml-auto mt-1 h-1.5 w-16 overflow-hidden rounded-full bg-[#e2e8f0] sm:w-24" aria-hidden>
-                      <div className="h-full rounded-full" style={{ width: pct(p.percent), background: partyColour(p.abbrev) }} />
-                    </div>
-                  </td>
-                  <td className="hidden py-2.5 pr-3 text-right tabular-nums sm:table-cell">{p.electorateSeats}</td>
-                  <td className="hidden py-2.5 pr-3 text-right tabular-nums sm:table-cell">{p.listSeats}</td>
-                  <td className="py-2.5 text-right text-base font-bold tabular-nums">{p.seats}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="overflow-hidden rounded-2xl border border-[#dce4ef] bg-white shadow-sm">
+        <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-7">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">National picture</p>
+            <h2 className="mt-1 text-xl font-bold">Party vote and projected seats</h2>
+          </div>
+          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">Preliminary</span>
+        </div>
+        <div className="p-5 sm:p-7">
+          <PartyTable parties={results.parties.filter((party) => party.seats > 0 || party.percent >= 1)} />
+          {results.parties.some((party) => party.seats === 0 && party.percent < 1) && (
+            <details className="mt-4 rounded-xl border border-slate-200 px-4 py-3">
+              <summary className="cursor-pointer text-sm font-bold text-blue-700">View all other parties ({results.parties.filter((party) => party.seats === 0 && party.percent < 1).length})</summary>
+              <div className="mt-4"><PartyTable parties={results.parties.filter((party) => party.seats === 0 && party.percent < 1)} /></div>
+            </details>
+          )}
+          <p className="mt-4 text-[11px] leading-5 text-slate-500">Logos from the Electoral Commission’s party register and the NZ Loyal website. Free Palestine has a text label because its register entry has no logo.</p>
         </div>
       </section>
     </>
@@ -236,9 +261,9 @@ export default async function ResultsPage() {
       <AutoRefresh seconds={60} />
 
       <main className="w-full px-4 py-6 sm:px-6 sm:py-8">
-        <header className="mb-5 rounded-2xl bg-[#101e36] px-5 py-6 text-white shadow-sm sm:px-7 sm:py-7">
+        <header className="mb-5 rounded-2xl border-l-4 border-cyan-300 bg-[#101e36] px-5 py-4 text-white shadow-sm sm:px-7 sm:py-5">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#8edce4]">New Zealand General Election 2026</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-5xl">Live election results</h1>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Live election results</h1>
           <p className="mt-2 text-sm text-slate-300">Advance voting and preliminary results from the Electoral Commission.</p>
         </header>
 
