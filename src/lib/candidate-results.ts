@@ -4,7 +4,7 @@ import { getXml } from "@/lib/official-results";
 export type CandidateVote = { id: string; name: string; party: string; votes: number };
 export type ElectorateRace = {
   id: string; name: string; updated: string | null; reporting: number;
-  candidates: CandidateVote[]; validVotes: number;
+  candidates: CandidateVote[]; validVotes: number; countComplete?: boolean;
 };
 function value(xml: string, name: string) {
   const text = xml.match(new RegExp("<" + name + ">([\\s\\S]*?)</" + name + ">"))?.[1] ?? "";
@@ -41,7 +41,9 @@ export function parseRace(xml: string, electorate: { id: string; name: string },
   if (!candidates.length || !Number.isFinite(reporting) || reporting < 0 || reporting > 100) throw new Error("Incomplete electorate result");
   return {
     ...electorate, updated: xml.match(/\bupdated="([^"]+)"/)?.[1] ?? null,
-    reporting, candidates, validVotes: candidates.reduce((sum, c) => sum + c.votes, 0),
+    reporting, countComplete: Number(value(value(xml, "statistics"), "total_voting_places")) > 0 &&
+      Number(value(value(xml, "statistics"), "total_voting_places_counted")) === Number(value(value(xml, "statistics"), "total_voting_places")),
+    candidates, validVotes: candidates.reduce((sum, c) => sum + c.votes, 0),
   };
 }
 
