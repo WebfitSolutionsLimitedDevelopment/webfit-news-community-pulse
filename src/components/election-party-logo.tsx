@@ -53,7 +53,7 @@ export function PartyLogo({ name }: { name: string }) {
       {source && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={source} alt={name + " logo"} width={80} height={48} loading="lazy" referrerPolicy="no-referrer" className="max-h-full max-w-full object-contain" onError={() => setFailed(true)} />
-      ) : <span className="text-center text-[10px] font-bold leading-3 text-slate-500">{source ? name : "Free Palestine"}</span>}
+      ) : <span className="text-center text-[10px] font-bold leading-3 text-slate-500">{name}</span>}
     </span>
   );
 }
