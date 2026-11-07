@@ -1,3 +1,4 @@
+import { ResizableResults } from "@/components/resizable-results";
 import { ADVANCE_SOURCE, POLLS_CLOSE, loadAdvanceVoting } from "@/lib/advance-voting";
 import { Clock, ExternalLink, Landmark } from "lucide-react";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -226,7 +227,32 @@ export default async function ResultsPage() {
           <p className="mt-2 text-sm text-neutral-600">Advance voting and preliminary results from the Electoral Commission.</p>
         </header>
 
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.65fr)]">
+        <ResizableResults video={(
+          <aside className="min-w-0" aria-label="RNZ election coverage">
+            <section className="overflow-hidden rounded-xl border border-[#e3ded5] bg-white shadow-sm">
+              <div className="border-b border-[#e3ded5] px-5 py-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#7b1025]">Watch RNZ</p>
+                <h2 className="mt-1 text-lg font-semibold">Election night coverage</h2>
+              </div>
+              <div className="aspect-video bg-black">
+                <iframe
+                  src="https://www.youtube.com/embed/irMgYQ_a-eY"
+                  title="RNZ election night coverage on YouTube"
+                  className="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 text-sm">
+                <p className="font-semibold text-neutral-700">Source RNZ</p>
+                <a href="https://www.youtube.com/live/irMgYQ_a-eY" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#7b1025] underline">
+                  Watch on YouTube <ExternalLink size={14} aria-hidden />
+                </a>
+              </div>
+            </section>
+          </aside>
+        )}>
           <div className="min-w-0">
         <div className="space-y-4">
           {showResults ? <Results results={results} /> : <Holding feedOk={results.ok} pollsClosed={pollsClosed} />}
@@ -265,31 +291,7 @@ export default async function ResultsPage() {
           </p>
         </section>
           </div>
-          <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start" aria-label="RNZ election coverage">
-            <section className="overflow-hidden rounded-xl border border-[#e3ded5] bg-white shadow-sm">
-              <div className="border-b border-[#e3ded5] px-5 py-4">
-                <p className="text-xs font-bold uppercase tracking-widest text-[#7b1025]">Watch RNZ</p>
-                <h2 className="mt-1 text-lg font-semibold">Election night coverage</h2>
-              </div>
-              <div className="aspect-video bg-black">
-                <iframe
-                  src="https://www.youtube.com/embed/irMgYQ_a-eY"
-                  title="RNZ election night coverage on YouTube"
-                  className="h-full w-full border-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                />
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 text-sm">
-                <p className="font-semibold text-neutral-700">Source RNZ</p>
-                <a href="https://www.youtube.com/live/irMgYQ_a-eY" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#7b1025] underline">
-                  Watch on YouTube <ExternalLink size={14} aria-hidden />
-                </a>
-              </div>
-            </section>
-          </aside>
-        </div>
+        </ResizableResults>
       </main>
 
       <SiteFooter />
