@@ -3,22 +3,22 @@
 import { useState } from "react";
 
 const LOGOS: Record<string, string> = {
-  "ACT": "https://elections.nz/assets/Party-logos/the-act-party-logo-august-2019__ScaleWidthWzMwMF0.jpg",
+  "ACT": "/party-logos/ACT.jpg",
   "Alliance": "https://elections.nz/assets/Party-logos/ALLIANCE-HR-v2__ScaleWidthWzMwMF0.jpg",
-  "Animal": "https://elections.nz/assets/Party-logos/ANIMAL2__ScaleWidthWzMwMF0.JPG",
-  "ALCP": "https://elections.nz/assets/Party-logos/The-Cannabis-Party_270720__ScaleWidthWzMwMF0.jpg",
-  "Conservative": "https://elections.nz/assets/Party-logos/HIGHRE1__ScaleWidthWzMwMF0.JPG",
-  "NZF": "https://elections.nz/assets/Party-logos/NZF_Logo-72dpi_300px_RGB.jpg",
-  "LAB": "https://elections.nz/assets/Party-logos/labour-party-logo-june-2016.jpg",
-  "Outdoors": "https://elections.nz/assets/Party-logos/OF_Logo_RGB_Gradient-1__ScaleWidthWzMwMF0.jpg",
-  "OPP": "https://elections.nz/assets/Party-logos/Opportunity_Logo_Colour_RGB-v2__ScaleWidthWzMwMF0.jpg",
-  "TPMAO": "https://elections.nz/assets/Party-logos/Maori-part-logo-Final_Maaeori-full-colour-002__ScaleWidthWzMwMF0.jpg",
+  "Animal": "/party-logos/Animal.jpg",
+  "ALCP": "/party-logos/ALCP.jpg",
+  "Conservative": "/party-logos/Conservative.jpg",
+  "NZF": "/party-logos/NZF.jpg",
+  "LAB": "/party-logos/LAB.jpg",
+  "Outdoors": "/party-logos/Outdoors.jpg",
+  "OPP": "/party-logos/OPP.jpg",
+  "TPMAO": "/party-logos/TPMAO.jpg",
   "TTTP": "https://elections.nz/assets/Party-logos/Tohu-v2__ScaleWidthWzMwMF0.jpg",
-  "GP": "https://elections.nz/assets/Party-logos/green-party-logo-june-2017.jpg",
-  "NAT": "https://elections.nz/assets/Party-logos/Low-Resolution-300px.jpg",
-  "Vision": "https://elections.nz/assets/Party-logos/Vision-New-Zealand-logo-October-2019.png",
-  "Women": "https://elections.nz/assets/Party-logos/Womens-Rights-Party-Logo-hi-res__ScaleWidthWzMwMF0.jpg",
-  "Loyal": "https://nzloyal.com/wp-content/uploads/2025/02/New_Zealand_Loyal_Logo.jpg"
+  "GP": "/party-logos/GP.jpg",
+  "NAT": "/party-logos/NAT.jpg",
+  "Vision": "/party-logos/Vision.png",
+  "Women": "/party-logos/Women.jpg",
+  "Loyal": "/party-logos/Loyal.jpg"
 };
 const ALIASES: Record<string, string> = {
   "National": "NAT",
