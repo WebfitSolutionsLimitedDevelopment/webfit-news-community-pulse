@@ -1,3 +1,6 @@
+import { Suspense } from "react";
+import { CandidateResults } from "@/components/candidate-results";
+import { loadCandidateRaces } from "@/lib/candidate-results";
 import { ResizableResults } from "@/components/resizable-results";
 import { ADVANCE_SOURCE, POLLS_CLOSE, loadAdvanceVoting } from "@/lib/advance-voting";
 import { Clock, ExternalLink, Landmark } from "lucide-react";
@@ -208,6 +211,11 @@ function Results({ results }: { results: OfficialResults }) {
   );
 }
 
+async function CandidateResultsPanel() {
+  const races = await loadCandidateRaces();
+  return <CandidateResults races={races} />;
+}
+
 export default async function ResultsPage() {
   // Server render: reevaluate the election-night cutoff whenever the page is regenerated.
   // eslint-disable-next-line react-hooks/purity
@@ -228,6 +236,7 @@ export default async function ResultsPage() {
         </header>
 
         <ResizableResults video={(
+          <>
           <aside className="min-w-0" aria-label="RNZ election coverage">
             <section className="overflow-hidden rounded-xl border border-[#e3ded5] bg-white shadow-sm">
               <div className="border-b border-[#e3ded5] px-5 py-4">
@@ -252,6 +261,10 @@ export default async function ResultsPage() {
               </div>
             </section>
           </aside>
+          <Suspense fallback={<div className="mt-5 rounded-xl border border-[#e3ded5] bg-white p-5 text-sm text-neutral-600">Loading candidate and electorate results…</div>}>
+            <CandidateResultsPanel />
+          </Suspense>
+          </>
         )}>
           <div className="min-w-0">
         <div className="space-y-4">
