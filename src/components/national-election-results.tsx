@@ -50,11 +50,11 @@ export function NationalResults({ results }: { results: OfficialResults }) {
 
   function rows(parties: OfficialResults["parties"]) {
     return parties.map((party) => (
-      <li key={party.abbrev} className="grid grid-cols-[48px_minmax(0,1fr)_62px_46px] items-center gap-x-3 border-b border-slate-100 py-2.5 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
+      <li key={party.abbrev} className="group grid grid-cols-[40px_minmax(0,1fr)_62px_40px] items-center gap-x-3 rounded-lg border-b border-slate-100 px-1 py-3 transition-colors hover:bg-slate-50 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
         <PartyLogo name={party.name} compact />
         <div className="min-w-0">
           <p className="text-sm font-bold leading-5 text-[#172b40]">{party.name}</p>
-          <div className="mt-2 h-2 rounded-full bg-slate-100" aria-hidden>
+          <div className="mt-2 h-2.5 rounded-full bg-slate-100" aria-hidden>
             <div className="h-full rounded-full" style={{ width: percent(party.percent), background: partyColour(party.abbrev) }} />
           </div>
         </div>
@@ -69,12 +69,25 @@ export function NationalResults({ results }: { results: OfficialResults }) {
 
   return (
     <section id="party-results" className="mb-8 grid scroll-mt-6 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,35,55,0.07)] lg:grid-cols-[0.9fr_1.1fr]" aria-label="National results">
-      <div className="flex flex-col bg-[#102536] px-6 py-7 text-white sm:px-8">
+      <div className="relative flex flex-col bg-[radial-gradient(ellipse_at_top_left,#1c4653_0%,#102536_65%)] px-6 py-7 text-white sm:px-8">
         <div className="flex items-center justify-between gap-4">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8dddd7]">The shape of Parliament</p>
           <span className="rounded-full border border-white/20 px-2.5 py-1 text-[10px] font-semibold text-slate-300">Projected seats</span>
         </div>
         <h2 className="mt-4 max-w-lg text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{headline}</h2>
+        <div className="mt-4 rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-[11px] font-semibold text-[#b6d9dd]">Majority watch</p>
+            <p className="text-sm font-bold">{results.majority} seats needed</p>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-300">{government >= results.majority
+            ? "Government grouping is " + (government - results.majority) + " seat" + (government - results.majority === 1 ? "" : "s") + " above the majority threshold."
+            : "Government grouping needs " + (results.majority - government) + " more seat" + (results.majority - government === 1 ? "" : "s") + " to reach a majority."}</p>
+          <div className="relative mt-3 h-2 rounded-full bg-white/10" aria-hidden>
+            <div className="h-full rounded-full bg-[#8dddd7]" style={{width: Math.min(100, government / Math.max(1, results.totalSeats) * 100) + "%"}} />
+            <span className="absolute -top-1 h-4 w-0.5 bg-white" style={{left: results.majority / Math.max(1, results.totalSeats) * 100 + "%"}} />
+          </div>
+        </div>
         <div className="my-auto py-5"><SeatChamber results={results} /></div>
         <div className="grid grid-cols-3 gap-3 border-t border-white/15 pt-4">
           {[
@@ -106,7 +119,7 @@ export function NationalResults({ results }: { results: OfficialResults }) {
           <summary className="cursor-pointer py-2 text-xs font-bold text-[#00776f]">All other parties ({others.length})</summary>
           <ul>{rows(others)}</ul>
         </details>}
-        <p className="mt-3 text-[10px] leading-4 text-slate-400">Preliminary Electoral Commission results. Party logos are sourced from the Commission and official party websites. Free Palestine uses a text label.</p>
+        <p className="mt-3 text-[10px] leading-4 text-slate-400">Preliminary Electoral Commission results · Leads and projected seats can change.</p>
       </div>
     </section>
   );
