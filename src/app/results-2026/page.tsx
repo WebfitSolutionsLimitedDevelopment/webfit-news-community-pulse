@@ -1,3 +1,4 @@
+import { ElectionUpdate } from "@/components/election-update";
 import { LiveViewers } from "@/components/live-viewers";
 import { Suspense } from "react";
 import { NationalResults } from "@/components/national-election-results";
@@ -132,6 +133,8 @@ export default async function ResultsPage() {
         </header>
 
         {showResults && <ResultsTicker updated={results.updated} items={results.parties.map((party) => party.name + " · " + pct(party.percent) + " · " + party.seats + " projected seats")} />}
+
+        {showResults && <ElectionUpdate results={results} />}
 
         {showResults ? <NationalResults results={results} /> : <div className="mb-6"><Holding feedOk={results.ok} pollsClosed={pollsClosed} /></div>}
 
