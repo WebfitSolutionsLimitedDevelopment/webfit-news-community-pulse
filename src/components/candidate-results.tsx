@@ -12,6 +12,67 @@ function displayName(name: string) {
   return given ? given + " " + surname.toLocaleLowerCase("en-NZ").replace(/(^|[ -])\p{L}/gu, (letter) => letter.toLocaleUpperCase("en-NZ")) : name;
 }
 
+
+function ElectorateParade({ races }: { races: ElectorateRace[] }) {
+  const [paused, setPaused] = useState(false);
+  const ordered = [...races].sort((a, b) => a.name.localeCompare(b.name, "en-NZ", { sensitivity: "base" }));
+  if (!ordered.length) return null;
+
+  const cards = (duplicate: boolean) => (
+    <div className={duplicate ? "electorate-parade-copy flex shrink-0 gap-4 pr-4" : "flex shrink-0 gap-4 pr-4"} aria-hidden={duplicate || undefined}>
+      {ordered.map((race) => {
+        const leader = race.candidates[0];
+        if (!leader) return null;
+        const runner = race.candidates[1];
+        const margin = leader.votes - (runner?.votes ?? 0);
+        const voted = race.validVotes > 0;
+        return (
+          <article key={race.id} className="w-[320px] shrink-0 rounded-xl border border-slate-200 border-t-[3px] bg-white p-4 sm:w-[360px]" style={{ borderTopColor: partyColour(leader.party) }}>
+            <h3 className="text-sm font-bold text-[#172b40]">{race.name}</h3>
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{voted ? (runner && margin === 0 ? "Joint leader" : "Leading candidate") : "Count pending"}</p>
+                <p className="mt-1 text-base font-bold leading-snug tracking-tight text-[#10213b]">{voted ? displayName(leader.name) : "Awaiting candidate votes"}</p>
+              </div>
+              {voted && <div className="shrink-0 text-right"><p className="text-xl font-bold tabular-nums text-[#10213b]">{number.format(leader.votes)}</p><p className="text-[10px] text-slate-500">votes · {(leader.votes / race.validVotes * 100).toFixed(1)}%</p></div>}
+            </div>
+            <div className="mt-2 flex items-center gap-2"><PartyLogo name={leader.party} compact /><p className="text-[11px] font-semibold" style={{ color: partyColour(leader.party) }}>{leader.party}</p></div>
+            <p className="mt-3 truncate rounded-lg bg-slate-50 px-2.5 py-2 text-xs leading-5 text-slate-600">{voted && runner ? <>{margin === 0 ? "Tied with " : "Ahead of "}{displayName(runner.name)}{margin > 0 && <strong> by {number.format(margin)} votes</strong>}</> : "Awaiting further results"}</p>
+            <progress aria-label={race.name + " voting places reporting"} value={race.reporting} max={100} className="mt-3 block h-1.5 w-full" />
+            <p className="mt-1 text-[10px] text-slate-500">{race.reporting.toFixed(1)}% of voting places reporting</p>
+          </article>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <section className="electorate-parade mb-6 min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-[#edf3f4] py-5" aria-labelledby="electorate-parade-title">
+      <div className="mb-4 flex items-center justify-between gap-3 px-5 sm:px-7">
+        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#00776f]">Around the electorates</p><h2 id="electorate-parade-title" className="mt-1 text-lg font-bold">Every race. A–Z.</h2><p className="mt-1 text-xs text-slate-500">{ordered.length} electorates · Latest preliminary results · Refreshes every 60s</p></div>
+        <button type="button" aria-pressed={paused} onClick={() => setPaused(!paused)} className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#00776f] focus-visible:outline-2 focus-visible:outline-[#00776f]">{paused ? "Resume cards" : "Pause cards"}</button>
+      </div>
+      <div className="electorate-parade-window" tabIndex={0} role="region" aria-label="Electorate results moving from right to left in alphabetical order. Hover or focus to pause. Search all races below.">
+        <div className="electorate-parade-track flex w-max" style={{ animationDuration: ordered.length * 10 + "s", animationPlayState: paused ? "paused" : undefined }}>
+          {cards(false)}{cards(true)}
+        </div>
+      </div>
+      <p className="mt-3 px-5 text-[10px] text-slate-500 sm:px-7">Hover to pause · Use the search below to explore any race · Source Electoral Commission</p>
+      <style>{`
+        .electorate-parade-window { overflow-x: auto; scrollbar-width: thin; }
+        .electorate-parade-track { animation: electorate-parade-travel linear infinite; }
+        .electorate-parade-window:hover .electorate-parade-track,
+        .electorate-parade-window:focus-within .electorate-parade-track { animation-play-state: paused !important; }
+        @keyframes electorate-parade-travel { to { transform: translateX(-50%); } }
+        @media (prefers-reduced-motion: reduce) {
+          .electorate-parade-track { animation: none; }
+          .electorate-parade-copy { display: none; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
 export function CandidateResults({ races }: { races: ElectorateRace[] }) {
   const panel = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
@@ -34,6 +95,8 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
   const pageRaces = visible.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   return (
+    <>
+    <ElectorateParade races={races} />
     <section ref={panel} className="mb-6 scroll-mt-5 rounded-[24px] border border-slate-200 bg-white p-5 sm:p-7" aria-labelledby="candidate-races-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -111,5 +174,6 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
       <p className="mt-4 text-[11px] leading-5 text-slate-500">Winston Peters and Marama Davidson are list candidates only in the Commission feed, so they have no individual electorate vote total. Leads can change as counting continues.</p>
       <a href="https://electionresults.govt.nz/ge2026/electorate-status.html" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs font-semibold text-[#1d4ed8] underline">Source Electoral Commission · All electorate results</a>
     </section>
+    </>
   );
 }
