@@ -10,7 +10,7 @@ export function LiveViewers() {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
-    let viewer = crypto.randomUUID();
+    let viewer: string = crypto.randomUUID();
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) viewer = saved;
