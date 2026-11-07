@@ -20,18 +20,18 @@ function ClosestRaces({ races, onSelect }: { races: ElectorateRace[]; onSelect: 
     .slice(0,3);
   if (!closest.length) return null;
   return (
-    <section className="mb-6 rounded-[24px] border border-amber-200 bg-[#fffbf2] p-5 sm:p-7" aria-labelledby="closest-races-title">
+    <section className="mb-6 rounded-[24px] border border-[#213e50] bg-[#102536] p-5 shadow-[0_12px_36px_rgba(15,35,55,0.1)] sm:p-7" aria-labelledby="closest-races-title">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#936020]">Seats to watch</p><h2 id="closest-races-title" className="mt-1 text-xl font-bold">Closest races right now</h2></div>
-        <p className="max-w-md text-xs leading-5 text-slate-500">Smallest vote margins across available feeds. These are current leads, not declared results.</p>
+        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#f4cc80]">Seats to watch</p><h2 id="closest-races-title" className="mt-1 text-2xl font-bold tracking-tight text-white">Closest races right now</h2></div>
+        <p className="max-w-md text-xs leading-5 text-slate-300">The narrowest leads in the count. Every new result can change the order.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         {closest.map(race => {
           const [leader, runner] = race.candidates;
           const margin = leader.votes - runner.votes;
           return (
-            <button key={race.id} type="button" onClick={() => onSelect(race.name)} className="min-w-0 rounded-xl border border-amber-100 bg-white p-4 text-left transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-[#00776f]" aria-label={"Explore " + race.name + ", " + number.format(margin) + " vote margin"}>
-              <div className="flex items-start justify-between gap-3"><h3 className="text-sm font-bold">{race.name}</h3><div className="shrink-0 text-right"><strong className="text-2xl font-bold tabular-nums text-[#936020]">{number.format(margin)}</strong><p className="text-[10px] font-semibold text-slate-500">{margin === 0 ? "votes · tied" : "vote lead"}</p></div></div>
+            <button key={race.id} type="button" onClick={() => onSelect(race.name)} className="min-w-0 rounded-xl border border-white/20 bg-white p-5 text-left transition-shadow hover:shadow-[0_0_0_3px_rgba(141,221,215,0.5)] focus-visible:outline-2 focus-visible:outline-[#00776f]" aria-label={"Explore " + race.name + ", " + number.format(margin) + " vote margin"}>
+              <div className="flex items-start justify-between gap-3"><h3 className="text-sm font-bold">{race.name}</h3><div className="shrink-0 rounded-lg bg-[#fff3d9] px-3 py-1 text-right"><strong className="text-3xl font-bold tabular-nums text-[#855314]">{number.format(margin)}</strong><p className="text-[10px] font-semibold text-slate-500">{margin === 0 ? "votes · tied" : "vote lead"}</p></div></div>
               <div className="mt-3 space-y-3">
                 {[leader, runner].map((candidate,index) => <div key={candidate.id}>
                   <div className="flex items-center gap-2"><PartyLogo name={candidate.party} compact /><div className="min-w-0 flex-1"><p className="text-xs font-bold">{displayName(candidate.name)}</p><p className="text-[10px] text-slate-500">{candidate.party}</p></div><strong className="shrink-0 text-sm tabular-nums">{number.format(candidate.votes)}</strong></div>
@@ -139,7 +139,7 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-[#00776f]">Every local contest</p>
           <h2 id="candidate-races-title" className="mt-1 scroll-mt-5 text-2xl font-bold tracking-tight">Follow the electorate races</h2>
-          <p className="mt-1 text-xs text-slate-500">{races.length} of 71 feeds available · Preliminary</p>
+          <p className="mt-1 text-xs text-slate-500">{races.length} of 71 electorates · Preliminary</p>
         </div>
         <div className="flex rounded-lg bg-slate-100 p-1" aria-label="Race view">
           <button type="button" onClick={() => { setShowAll(false); setPage(0); }} aria-pressed={!showAll} className={`rounded-md px-3 py-2 text-xs font-semibold ${!showAll ? "bg-white text-[#00776f] shadow-sm" : "text-slate-600 hover:text-[#00776f]"}`}>Key races</button>
