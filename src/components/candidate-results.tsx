@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PartyLogo } from "@/components/election-party-logo";
 import { partyColour } from "@/lib/result-colours";
 import type { ElectorateRace } from "@/lib/candidate-results";
@@ -13,6 +13,7 @@ function displayName(name: string) {
 }
 
 export function CandidateResults({ races }: { races: ElectorateRace[] }) {
+  const panel = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [page, setPage] = useState(0);
@@ -23,13 +24,17 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
     return showAll || race.candidates.some((candidate) => FEATURED.includes(candidate.name));
   });
 
+  const changePage = (nextPage: number) => {
+    setPage(nextPage);
+    panel.current?.scrollIntoView({ block: "start" });
+  };
   const pageSize = 12;
   const lastPage = Math.max(0, Math.ceil(visible.length / pageSize) - 1);
   const currentPage = Math.min(page, lastPage);
   const pageRaces = visible.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   return (
-    <section className="rounded-2xl border border-[#dce4ef] bg-white p-4 shadow-sm sm:p-6" aria-labelledby="candidate-races-title">
+    <section ref={panel} className="scroll-mt-5 rounded-2xl border border-[#dce4ef] bg-white p-4 shadow-sm sm:p-6" aria-labelledby="candidate-races-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-blue-700">The electorate vote</p>
@@ -98,8 +103,8 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
           <p className="text-xs text-slate-500" aria-live="polite">Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, visible.length)} of {visible.length}</p>
           <div className="flex gap-2">
-            <button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-40">Previous</button>
-            <button type="button" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-40">Next</button>
+            <button type="button" disabled={currentPage === 0} onClick={() => changePage(currentPage - 1)} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-40">Previous</button>
+            <button type="button" disabled={currentPage === lastPage} onClick={() => changePage(currentPage + 1)} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-40">Next</button>
           </div>
         </div>
       )}
