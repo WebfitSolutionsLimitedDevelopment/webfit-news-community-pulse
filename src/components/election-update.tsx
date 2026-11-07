@@ -50,7 +50,7 @@ export function ElectionUpdate({ results }: { results: OfficialResults }) {
       for (const p of movements.slice(0, 2)) items.push(p.name + " vote share " + (p.delta > 0 ? "+" : "−") + Math.abs(p.delta).toFixed(1) + " percentage points");
       const reporting = Math.round((current.reporting - prior.reporting) * 10) / 10;
       if (reporting > 0) items.push("Voting places reporting +" + reporting.toFixed(1) + " percentage points");
-      if (!items.length) items.push("New feed received. Projected seats and displayed vote shares are unchanged.");
+      if (!items.length) items.push("No change in projected seats or vote shares.");
     }
     setUpdate({ compared: prior?.updated ?? null, items: items.slice(0, 5) });
     previous.current = current;
@@ -58,14 +58,14 @@ export function ElectionUpdate({ results }: { results: OfficialResults }) {
   }, [results]);
 
   return (
-    <section className="mb-5 flex flex-col gap-3 rounded-xl border border-teal-100 bg-[#eaf5f2] px-4 py-3 sm:flex-row sm:items-center sm:gap-5" aria-labelledby="election-update-title">
+    <section className="mb-5 flex flex-col gap-2 rounded-xl border border-teal-200/70 bg-white/90 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:gap-5" aria-labelledby="election-update-title">
       <div className="shrink-0">
-        <h2 id="election-update-title" className="text-xs font-bold text-[#00685f]">Changed since your last update</h2>
-        <p className="mt-1 text-[10px] text-slate-500">{update.compared ? "Compared with " + update.compared.replace("T", " ") + " NZ time" : "Tracking changes while you watch"}</p>
+        <h2 id="election-update-title" className="text-xs font-bold text-[#00685f]">{update.items.length ? "Latest movements" : "Live updates"}</h2>
+        {update.compared && <p className="mt-1 text-[10px] text-slate-500">Since {update.compared.split("T").pop()} NZ time</p>}
       </div>
       <div className="min-w-0" aria-live="polite" aria-atomic="true">
         {update.items.length ? <ul className="flex flex-wrap gap-2">{update.items.map(item => <li key={item} className="rounded-md border border-teal-100 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#172b40]">{item}</li>)}</ul> :
-          <p className="text-xs text-slate-600">Your first snapshot is saved when the feed connects. Changes appear after the next fresh update.</p>}
+          <p className="text-xs text-slate-600">Watching for new results…</p>}
       </div>
     </section>
   );
