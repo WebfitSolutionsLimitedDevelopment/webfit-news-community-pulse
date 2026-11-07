@@ -140,7 +140,7 @@ export default async function ResultsPage() {
 
         {showResults && <ElectionUpdate results={results} />}
 
-        <div className="grid min-w-0 items-start gap-5 min-[1600px]:grid-cols-[minmax(0,1fr)_310px]">
+        <div className="min-w-0">
           <div className="min-w-0">{showResults ? <NationalResults results={results} /> : <div className="mb-6"><Holding feedOk={results.ok} pollsClosed={pollsClosed} /></div>}</div>
           <Suspense fallback={<aside className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">Loading electorate status…</aside>}>
             <CompletedCounts />
