@@ -22,8 +22,8 @@ function ClosestRaces({ races, onSelect }: { races: ElectorateRace[]; onSelect: 
   return (
     <section className="mb-6 rounded-[24px] border border-[#0759b0] bg-[#0759b0] p-5 shadow-[0_12px_36px_rgba(15,35,55,0.1)] sm:p-7" aria-labelledby="closest-races-title">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#ffdc70]">Seats to watch</p><h2 id="closest-races-title" className="mt-1 text-2xl font-bold tracking-tight text-white">Closest races right now</h2></div>
-        <p className="max-w-md text-xs leading-5 text-slate-300">The narrowest leads in the count. Every new result can change the order.</p>
+        <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#ffdc70]">Seats to watch</p><h2 id="closest-races-title" className="mt-1 text-2xl font-bold tracking-tight text-white">Closest preliminary margins</h2></div>
+        <p className="max-w-md text-xs leading-5 text-slate-300">The smallest gaps in the preliminary results. Special votes and official checks can change these leads.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         {closest.map(race => {
@@ -109,7 +109,7 @@ function ElectorateParade({ races }: { races: ElectorateRace[] }) {
   );
 }
 
-export function CandidateResults({ races }: { races: ElectorateRace[] }) {
+export function CandidateResults({ races, showParade = true }: { races: ElectorateRace[]; showParade?: boolean }) {
   const panel = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
@@ -133,7 +133,7 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
   return (
     <>
     <ClosestRaces races={races} onSelect={(name) => { setQuery(name); setPage(0); panel.current?.scrollIntoView({ block: "start" }); }} />
-    <ElectorateParade races={races} />
+    {showParade && <ElectorateParade races={races} />}
     <section ref={panel} className="mb-6 scroll-mt-5 rounded-[24px] border border-[#c7ddf4] bg-white p-5 sm:p-7" aria-labelledby="candidate-races-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
