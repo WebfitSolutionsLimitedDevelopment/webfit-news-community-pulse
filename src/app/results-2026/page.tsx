@@ -168,7 +168,7 @@ function PartyTable({ parties }: { parties: OfficialResults["parties"] }) {
               </td>
               <td className="py-4 text-right align-middle">
                 <span className="inline-flex min-w-10 justify-center rounded-lg bg-slate-100 px-2 py-1 text-xl font-bold tabular-nums text-[#10213b]">{party.seats}</span>
-                <p className="mt-1 whitespace-nowrap text-[10px] text-slate-500">{party.electorateSeats} electorate · {party.listSeats} list</p>
+                <p className="mt-1 hidden whitespace-nowrap text-[10px] text-slate-500 sm:block">{party.electorateSeats} electorate · {party.listSeats} list</p>
               </td>
             </tr>
           ))}
