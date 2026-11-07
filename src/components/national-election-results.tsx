@@ -27,10 +27,10 @@ function SeatChamber({ results }: { results: OfficialResults }) {
             <title>{seats[index].name} · projected seat</title>
           </circle>
         ))}
-        <text x="210" y="183" textAnchor="middle" fill="#ffffff" fontFamily="Arial, sans-serif" fontSize="38" fontWeight="700">{results.majority}</text>
-        <text x="210" y="204" textAnchor="middle" fill="#b6c8d9" fontFamily="Arial, sans-serif" fontSize="11">seats for a majority</text>
+        <text x="210" y="183" textAnchor="middle" fill="#092a56" fontFamily="Arial, sans-serif" fontSize="38" fontWeight="700">{results.majority}</text>
+        <text x="210" y="204" textAnchor="middle" fill="#365578" fontFamily="Arial, sans-serif" fontSize="11">seats for a majority</text>
       </svg>
-      <figcaption className="text-center text-[11px] text-slate-400">One dot = one projected seat · {results.totalSeats} seats currently projected</figcaption>
+      <figcaption className="text-center text-[11px] text-[#607995]">One dot = one projected seat · {results.totalSeats} seats currently projected</figcaption>
     </figure>
   );
 }
@@ -68,37 +68,37 @@ export function NationalResults({ results }: { results: OfficialResults }) {
   }
 
   return (
-    <section id="party-results" className="mb-8 grid scroll-mt-6 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,35,55,0.07)] lg:grid-cols-[0.9fr_1.1fr]" aria-label="National results">
-      <div className="relative flex flex-col bg-[radial-gradient(ellipse_at_top_left,#1c4653_0%,#102536_65%)] px-6 py-7 text-white sm:px-8">
+    <section id="party-results" className="mb-8 grid scroll-mt-6 overflow-hidden rounded-[24px] border border-[#bfd8f3] bg-white shadow-[0_12px_40px_rgba(15,35,55,0.07)] lg:grid-cols-[0.9fr_1.1fr]" aria-label="National results">
+      <div className="relative flex flex-col bg-[linear-gradient(145deg,#ffffff_0%,#edf6ff_100%)] px-6 py-7 text-[#092a56] sm:px-8">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8dddd7]">The shape of Parliament</p>
-          <span className="rounded-full border border-white/20 px-2.5 py-1 text-[10px] font-semibold text-slate-300">Projected seats</span>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#005bb5]">The shape of Parliament</p>
+          <span className="rounded-full border border-[#bed7f1] px-2.5 py-1 text-[10px] font-semibold text-[#365578]">Projected seats</span>
         </div>
         <h2 className="mt-4 max-w-lg text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{headline}</h2>
-        <div className="mt-4 rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+        <div className="mt-4 rounded-xl border border-[#c9def3] bg-white px-4 py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-[11px] font-semibold text-[#b6d9dd]">Majority watch</p>
+            <p className="text-[11px] font-semibold text-[#005bb5]">Majority watch</p>
             <p className="text-sm font-bold">{results.majority} seats needed</p>
           </div>
-          <p className="mt-1 text-xs leading-5 text-slate-300">{government >= results.majority
+          <p className="mt-1 text-xs leading-5 text-[#365578]">{government >= results.majority
             ? "Government grouping is " + (government - results.majority) + " seat" + (government - results.majority === 1 ? "" : "s") + " above the majority threshold."
             : "Government grouping needs " + (results.majority - government) + " more seat" + (results.majority - government === 1 ? "" : "s") + " to reach a majority."}</p>
-          <div className="relative mt-3 h-2 rounded-full bg-white/10" aria-hidden>
-            <div className="h-full rounded-full bg-[#8dddd7]" style={{width: Math.min(100, government / Math.max(1, results.totalSeats) * 100) + "%"}} />
-            <span className="absolute -top-1 h-4 w-0.5 bg-white" style={{left: results.majority / Math.max(1, results.totalSeats) * 100 + "%"}} />
+          <div className="relative mt-3 h-2 rounded-full bg-[#cce0f3]" aria-hidden>
+            <div className="h-full rounded-full bg-[#087ee3]" style={{width: Math.min(100, government / Math.max(1, results.totalSeats) * 100) + "%"}} />
+            <span className="absolute -top-1 h-4 w-0.5 bg-[#092a56]" style={{left: results.majority / Math.max(1, results.totalSeats) * 100 + "%"}} />
           </div>
         </div>
         <div className="my-auto py-5"><SeatChamber results={results} /></div>
-        <div className="grid grid-cols-3 gap-3 border-t border-white/15 pt-4">
+        <div className="grid grid-cols-3 gap-3 border-t border-[#c9def3] pt-4">
           {[
-            { label: "Government", seats: government, colour: "#79afff", parties: "National · ACT · NZ First" },
-            { label: "Other parties", seats: results.blocs.other.seats, colour: "#8dddd7", parties: "Outside these groupings" },
-            { label: "Opposition", seats: opposition, colour: "#ffa4b4", parties: "Labour · Green · Te Pāti Māori" },
+            { label: "Government", seats: government, colour: "#135fc0", parties: "National · ACT · NZ First" },
+            { label: "Other parties", seats: results.blocs.other.seats, colour: "#087f85", parties: "Outside these groupings" },
+            { label: "Opposition", seats: opposition, colour: "#bb2445", parties: "Labour · Green · Te Pāti Māori" },
           ].map((bloc) => (
             <div key={bloc.label}>
-              <p className="text-[11px] text-slate-300">{bloc.label}</p>
+              <p className="text-[11px] text-[#365578]">{bloc.label}</p>
               <p className="mt-1 text-3xl font-bold tabular-nums" style={{color: bloc.colour}}>{bloc.seats}</p>
-              <p className="mt-1 text-[10px] leading-4 text-slate-400">{bloc.parties}</p>
+              <p className="mt-1 text-[10px] leading-4 text-[#607995]">{bloc.parties}</p>
             </div>
           ))}
         </div>
@@ -106,20 +106,20 @@ export function NationalResults({ results }: { results: OfficialResults }) {
       <div className="px-5 py-6 sm:px-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#00776f]">Nationwide party vote</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#005bb5]">Nationwide party vote</p>
             <h2 className="mt-1 text-xl font-bold text-[#172b40]">How the parties stand</h2>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-semibold text-slate-500">Sorted by vote share</span>
         </div>
-        <div className="mt-5 grid grid-cols-[48px_minmax(0,1fr)_62px_46px] gap-x-3 border-b border-slate-200 pb-2 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
+        <div className="mt-5 grid grid-cols-[48px_minmax(0,1fr)_62px_46px] gap-x-3 border-b border-slate-200 pb-2 text-right text-[10px] font-bold uppercase tracking-wide text-[#607995] sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
           <span className="col-span-2 text-left">Party</span><span>Vote share</span><span>Seats</span>
         </div>
         <ul>{rows(main)}</ul>
         {others.length > 0 && <details className="mt-3">
-          <summary className="cursor-pointer py-2 text-xs font-bold text-[#00776f]">All other parties ({others.length})</summary>
+          <summary className="cursor-pointer py-2 text-xs font-bold text-[#005bb5]">All other parties ({others.length})</summary>
           <ul>{rows(others)}</ul>
         </details>}
-        <p className="mt-3 text-[10px] leading-4 text-slate-400">Preliminary Electoral Commission results · Leads and projected seats can change.</p>
+        <p className="mt-3 text-[10px] leading-4 text-[#607995]">Preliminary Electoral Commission results · Leads and projected seats can change.</p>
       </div>
     </section>
   );
