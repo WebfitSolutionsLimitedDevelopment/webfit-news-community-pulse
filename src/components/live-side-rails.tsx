@@ -11,14 +11,14 @@ function displayName(text: string) {
 }
 
 
-function Spotlight({ races, complete }: { races: ElectorateRace[]; complete: boolean }) {
+function Spotlight({ races, complete, railPaused }: { races: ElectorateRace[]; complete: boolean; railPaused: boolean }) {
   const [index,setIndex]=useState(0);
   const [paused,setPaused]=useState(false);
   useEffect(()=>{
-    if(paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if(paused || railPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer=window.setInterval(()=>{if(!document.hidden)setIndex(i=>i+1);},14000);
     return ()=>window.clearInterval(timer);
-  },[paused]);
+  },[paused,railPaused]);
   const modes=complete ? ["Biggest vote leads","Strongest candidate shares","Completed count spotlight"] : ["On a knife edge","Almost through the count","Local contest spotlight"];
   const mode=index%3;
   const ranked=[...races].filter(r=>r.candidates.length>1).sort((a,b)=>{
@@ -66,7 +66,7 @@ function Rail({ races, complete }: { races: ElectorateRace[]; complete: boolean 
       <div className="mt-2 flex items-center justify-between gap-2"><h2 id={id} className="text-base font-bold">{complete ? "Completed counts" : "Still counting"}</h2><strong className="text-2xl tabular-nums text-[#005bb5]">{races.length}</strong></div>
       <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[10px] text-slate-500">Refreshes every 60s</span><button type="button" onClick={()=>setPaused(p=>!p)} aria-pressed={paused} className="rounded-md border border-blue-200 bg-white px-2 py-1 text-[10px] font-bold text-[#005bb5]">{paused ? "Resume" : "Pause"}</button></div>
     </div>
-    <Spotlight races={races} complete={complete} />
+    <Spotlight races={races} complete={complete} railPaused={paused} />
     <p className="border-b border-slate-100 px-4 py-2 text-[10px] leading-4 text-slate-500">{complete ? "All voting places reporting. Results remain preliminary." : "Electorates nearest to completing their count."}</p>
     <div className={"side-rail-window " + (paused ? "rail-paused" : "")} tabIndex={0} role="region" aria-label={(complete ? "Completed preliminary counts" : "Counts in progress") + ". Hover or focus to pause scrolling."}>
       {races.length ? <div className="side-rail-track" style={{animationDuration:Math.max(30,races.length*9)+"s",animationPlayState:paused?"paused":undefined}}>{cards(false)}{cards(true)}</div> : <p className="p-4 text-xs leading-5 text-slate-500">{complete ? "Completed preliminary counts appear here as electorates finish reporting." : "No counts in progress available."}</p>}
