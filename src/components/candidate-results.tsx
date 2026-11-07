@@ -48,7 +48,7 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
       </div>
       <label className="mt-4 block text-xs font-semibold text-slate-600" htmlFor="candidate-search">Find a candidate or electorate</label>
       <input id="candidate-search" type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} placeholder="Search names or electorates…" className="mb-4 mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm placeholder:text-slate-500 focus:bg-white focus:outline-2 focus:outline-blue-600" />
-      <div className="grid items-start gap-3 xl:grid-cols-2">
+      <div className={`grid items-start gap-3 ${pageRaces.length > 1 ? "xl:grid-cols-2" : ""}`}>
         {pageRaces.map((race) => {
           const leader = race.candidates[0];
           const runner = race.candidates[1];
@@ -57,7 +57,7 @@ export function CandidateResults({ races }: { races: ElectorateRace[] }) {
           const voted = race.validVotes > 0;
           const tied = voted && runner && margin === 0;
           return (
-            <details key={race.id} className="group overflow-hidden rounded-xl border border-slate-200 border-t-[3px] bg-white transition-shadow hover:shadow-md" style={{ borderTopColor: partyColour(leader.party) }}>
+            <details key={race.id} className="group overflow-hidden open:col-span-full rounded-xl border border-slate-200 border-t-[3px] bg-white transition-shadow hover:shadow-md" style={{ borderTopColor: partyColour(leader.party) }}>
               <summary className="cursor-pointer list-none p-4 focus-visible:outline-2 focus-visible:outline-[#1d4ed8] [&::-webkit-details-marker]:hidden">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-sm font-bold">{race.name}</h3>
