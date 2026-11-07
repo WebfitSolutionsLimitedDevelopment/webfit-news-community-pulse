@@ -27,8 +27,8 @@ function SeatChamber({ results }: { results: OfficialResults }) {
             <title>{seats[index].name} · projected seat</title>
           </circle>
         ))}
-        <text x="210" y="160" textAnchor="middle" fill="#ffffff" fontFamily="Arial, sans-serif" fontSize="46" fontWeight="700">{results.majority}</text>
-        <text x="210" y="182" textAnchor="middle" fill="#b6c8d9" fontFamily="Arial, sans-serif" fontSize="12">seats for a majority</text>
+        <text x="210" y="183" textAnchor="middle" fill="#ffffff" fontFamily="Arial, sans-serif" fontSize="38" fontWeight="700">{results.majority}</text>
+        <text x="210" y="204" textAnchor="middle" fill="#b6c8d9" fontFamily="Arial, sans-serif" fontSize="11">seats for a majority</text>
       </svg>
       <figcaption className="text-center text-[11px] text-slate-400">One dot = one projected seat · {results.totalSeats} seats currently projected</figcaption>
     </figure>
@@ -50,7 +50,7 @@ export function NationalResults({ results }: { results: OfficialResults }) {
 
   function rows(parties: OfficialResults["parties"]) {
     return parties.map((party) => (
-      <li key={party.abbrev} className="grid grid-cols-[48px_minmax(0,1fr)_62px_46px] items-center gap-x-3 border-b border-slate-100 py-3 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
+      <li key={party.abbrev} className="grid grid-cols-[48px_minmax(0,1fr)_62px_46px] items-center gap-x-3 border-b border-slate-100 py-2.5 sm:grid-cols-[52px_minmax(0,1fr)_74px_58px]">
         <PartyLogo name={party.name} compact />
         <div className="min-w-0">
           <p className="text-sm font-bold leading-5 text-[#172b40]">{party.name}</p>
@@ -60,8 +60,8 @@ export function NationalResults({ results }: { results: OfficialResults }) {
         </div>
         <p className="text-right text-xl font-bold tabular-nums tracking-tight text-[#172b40] sm:text-2xl">{percent(party.percent)}</p>
         <div className="text-right">
-          <p className="text-2xl font-bold tabular-nums text-[#172b40]">{party.seats}</p>
-          <p className="hidden whitespace-nowrap text-[9px] text-slate-500 sm:block">{party.electorateSeats} local + {party.listSeats} list</p>
+          <p className="text-2xl font-bold leading-none tabular-nums text-[#172b40]">{party.seats}</p>
+          <p className="mt-1 hidden whitespace-nowrap text-[9px] leading-3 text-slate-500 sm:block">{party.electorateSeats} local + {party.listSeats} list</p>
         </div>
       </li>
     ));
