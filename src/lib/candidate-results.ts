@@ -6,9 +6,6 @@ export type ElectorateRace = {
   id: string; name: string; updated: string | null; reporting: number;
   candidates: CandidateVote[]; validVotes: number;
 };
-const LEADER_NAMES = ["SEYMOUR, David", "LUXON, Christopher", "HIPKINS, Chris", "SWARBRICK, Chlöe", "NGAREWA-PACKER, Debbie", "WAITITI, Rawiri"];
-export const isFeaturedCandidate = (name: string) => LEADER_NAMES.includes(name);
-
 function value(xml: string, name: string) {
   const text = xml.match(new RegExp("<" + name + ">([\\s\\S]*?)</" + name + ">"))?.[1] ?? "";
   return text.replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
