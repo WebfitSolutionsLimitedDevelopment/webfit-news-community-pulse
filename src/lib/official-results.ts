@@ -157,12 +157,42 @@ export async function getXml(file: string) {
   return text;
 }
 
+// Electoral Commission preliminary results published on 7 November 2026.
+// Used only when the election-night XML media endpoint is no longer available.
+// This is a dated, official snapshot, not a live feed.
+function preliminarySnapshot(): OfficialResults {
+  const rows: Array<[string, string, number, number, number]> = [
+    ["NAT", "National", 29.21, 42, 0],
+    ["LAB", "Labour", 29.36, 21, 15],
+    ["GP", "Green", 13.30, 2, 14],
+    ["ACT", "ACT", 10.92, 1, 12],
+    ["NZF", "NZ First", 9.78, 0, 12],
+    ["OPP", "Opportunity Party", 5.96, 0, 7],
+    ["TPMAO", "Te Pāti Māori", 0.57, 5, 0],
+  ];
+  const parties = rows.map(([abbrev, name, percent, electorateSeats, listSeats]) => ({
+    abbrev, name, percent, electorateSeats, listSeats,
+    seats: electorateSeats + listSeats, bloc: blocForAbbrev(abbrev),
+  }));
+  const blocs = EMPTY_BLOCS();
+  for (const p of parties) {
+    blocs[p.bloc].percent += p.percent;
+    blocs[p.bloc].seats += p.seats;
+  }
+  for (const bloc of Object.values(blocs)) bloc.percent = Math.round(bloc.percent * 100) / 100;
+  return {
+    ok: true, hasResults: true, updated: "2026-11-07T23:59:00",
+    percentPlacesCounted: 100, percentElectoratesFinal: 100,
+    totalSeats: 131, majority: 66, parties, blocs,
+  };
+}
+
 export async function loadOfficialResults(): Promise<OfficialResults> {
   try {
     const [election, parties] = await Promise.all([getXml("election.xml"), getXml("parties.xml")]);
     return parseResults(election, parties);
   } catch (error) {
-    console.error("Official results feed unavailable", error);
-    return EMPTY;
+    console.error("Official XML feed unavailable; displaying published 7 November preliminary snapshot", error);
+    return preliminarySnapshot();
   }
 }
