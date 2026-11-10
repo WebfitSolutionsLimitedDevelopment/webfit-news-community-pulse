@@ -181,7 +181,7 @@ function preliminarySnapshot(): OfficialResults {
   }
   for (const bloc of Object.values(blocs)) bloc.percent = Math.round(bloc.percent * 100) / 100;
   return {
-    ok: true, hasResults: true, updated: "2026-11-07T23:59:00",
+    ok: true, hasResults: true, updated: null,
     percentPlacesCounted: 100, percentElectoratesFinal: 100,
     totalSeats: 131, majority: 66, parties, blocs,
   };
