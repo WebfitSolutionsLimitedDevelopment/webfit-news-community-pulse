@@ -14,7 +14,7 @@ import { RESULTS_SOURCE_URL, loadOfficialResults } from "@/lib/official-results"
 export const revalidate = 60;
 export const metadata = {
   title: "NZ Election 2026 Preliminary Results & Updates | Webfit News",
-  description: "Latest preliminary New Zealand election results, projected seats, party vote shares and electorate results. Updates from Electoral Commission data.",
+  description: "Electoral Commission preliminary election results published 7 November 2026.",
 };
 const pct = (value: number) => value.toFixed(1) + "%";
 function formatResultsUpdated(value: string | null) {
@@ -108,7 +108,7 @@ export default async function ResultsPage() {
               <Suspense fallback={null}><VoiceCommentary results={results} /></Suspense>
             </p>
             <h1 className="mt-2 text-4xl font-bold tracking-[-0.04em] text-[#063d7e] sm:text-5xl">Election 2026 results</h1>
-            <p className="mt-2 text-sm text-slate-500">Latest party votes, projected seats and electorate results.</p>
+            <p className="mt-2 text-sm text-slate-500">Electoral Commission preliminary results published 7 November 2026. The election-night XML feed is no longer reliably available.</p>
             <nav className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500" aria-label="Election sections">
               <a href="#party-results" className="rounded-lg bg-[#0759b0] px-3 py-2 text-white">National result</a>
               <a href="#candidate-races-title" className="rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-[#00776f] hover:text-[#00776f]">Electorate races</a>
